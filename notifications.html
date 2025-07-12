@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Notifications - Admin Panel</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background: #f0f2f5;
+        }
+
+        .navbar {
+            background: #2c3e50;
+            padding: 1rem;
+            color: white;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            margin-bottom: 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+
+        .navbar h1 {
+            text-align: center;
+        }
+
+        .back-link {
+            position: absolute;
+            left: 1rem;
+            color: white;
+            font-size: 1.2rem;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .back-link:hover {
+            color: #ddd;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 0 1rem;
+        }
+
+        .notifications-container {
+            background: white;
+            padding: 2rem;
+            border-radius: 10px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            margin-bottom: 2rem;
+        }
+
+        .notifications-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .notification-item {
+            padding: 1rem;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            align-items: start;
+            gap: 1rem;
+            transition: background-color 0.3s ease;
+        }
+
+        .notification-item:hover {
+            background-color: #f8f9fa;
+        }
+
+        .notification-item.unread {
+            background-color: #e8f4fd;
+        }
+
+        .notification-item.unread:hover {
+            background-color: #d1e9fc;
+        }
+
+        .notification-item.read {
+            opacity: 0.8;
+        }
+
+        .notification-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            flex-shrink: 0;
+        }
+
+        .notification-icon.attendance {
+            background: #e8f6e8;
+            color: #27ae60;
+        }
+
+        .notification-icon.system {
+            background: #fdebd0;
+            color: #f39c12;
+        }
+
+        .notification-icon.alert {
+            background: #fde8e8;
+            color: #e74c3c;
+        }
+
+        .notification-content {
+            flex: 1;
+        }
+
+        .notification-title {
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 0.5rem;
+        }
+
+        .notification-message {
+            color: #7f8c8d;
+            font-size: 0.9rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .notification-time {
+            color: #95a5a6;
+            font-size: 0.8rem;
+        }
+
+        .notification-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .action-btn {
+            padding: 4px 8px;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            color: white;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            transition: background-color 0.3s ease;
+        }
+
+        .view-btn {
+            background-color: #3498db;
+        }
+
+        .view-btn:hover {
+            background-color: #2980b9;
+        }
+
+        .delete-btn {
+            background-color: #e74c3c;
+        }
+
+        .delete-btn:hover {
+            background-color: #c0392b;
+        }
+
+        .notification-count {
+            background: #e74c3c;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 0.8rem;
+            margin-left: 8px;
+        }
+
+        .btn {
+            display: inline-block;
+            padding: 0.8rem 1.5rem;
+            background: #3498db;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            transition: background 0.3s ease;
+            border: none;
+            cursor: pointer;
+            font-size: 1rem;
+        }
+
+        .btn:hover {
+            background: #2980b9;
+        }
+
+        .back-btn {
+            background: #95a5a6;
+            margin-right: 1rem;
+        }
+
+        .back-btn:hover {
+            background: #7f8c8d;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 3rem;
+            color: #7f8c8d;
+        }
+
+        .empty-state i {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            color: #95a5a6;
+        }
+
+        .empty-state p {
+            font-size: 1.1rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .empty-state .subtitle {
+            font-size: 0.9rem;
+            color: #95a5a6;
+        }
+
+        .mark-all-read {
+            color: #3498db;
+            text-decoration: none;
+            font-size: 0.9rem;
+        }
+
+        .mark-all-read:hover {
+            text-decoration: underline;
+        }
+
+        @media (max-width: 768px) {
+            .notifications-header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            
+            .notifications-container {
+                padding: 1rem;
+            }
+            
+            .notification-item {
+                flex-direction: column;
+                padding: 1rem 0.75rem;
+            }
+            
+            .notification-content {
+                width: 100%;
+            }
+            
+            .notification-actions {
+                margin-top: 1rem;
+                justify-content: flex-end;
+                width: 100%;
+            }
+            
+            .btn {
+                padding: 0.6rem 1rem;
+                font-size: 0.9rem;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .navbar h1 {
+                font-size: 1.5rem;
+            }
+            
+            .notification-item {
+                gap: 0.5rem;
+            }
+            
+            .notification-title {
+                font-size: 0.9rem;
+            }
+            
+            .notification-message {
+                font-size: 0.8rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <a href="admin-dashboard.html" class="back-link">
+            <i class="fas fa-arrow-left"></i> <span class="back-text">Back</span>
+        </a>
+        <h1>Notifications</h1>
+    </nav>
+
+    <div class="container">
+        <div class="notifications-container">
+            <div class="notifications-header">
+                <h2>Your Notifications <span id="unreadCount" class="notification-count"></span></h2>
+                <a href="#" class="mark-all-read" onclick="markAllRead()">
+                    <i class="fas fa-check-double"></i> Mark all as read
+                </a>
+            </div>
+
+            <div id="notificationsContent">
+                <!-- Notifications will be loaded here -->
+            </div>
+
+            <div style="margin-top: 2rem; text-align: center;">
+                <a href="admin-dashboard.html" class="btn back-btn">
+                    <i class="fas fa-arrow-left"></i> Back to Dashboard
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Check if user is logged in as admin
+        function checkLogin() {
+            const token = localStorage.getItem('auth_token');
+            const userRole = localStorage.getItem('user_role');
+            
+            if (!token || userRole !== 'admin') {
+                window.location.href = 'login.html';
+                return;
+            }
+        }
+
+        // Load notifications from API
+        async function loadNotifications() {
+            try {
+                const token = localStorage.getItem('auth_token');
+                const response = await fetch('/api/admin/notifications', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to fetch notifications');
+                }
+
+                const notifications = await response.json();
+                const notificationsContent = document.getElementById('notificationsContent');
+                
+                // Get read status from localStorage
+                const readNotifications = JSON.parse(localStorage.getItem('read_notifications') || '[]');
+                
+                // Calculate actual unread count based on read status
+                const unreadCount = notifications.filter(n => !readNotifications.includes(n.timestamp)).length;
+
+                // Update unread count
+                document.getElementById('unreadCount').textContent = unreadCount > 0 ? unreadCount : '';
+
+                if (notifications.length === 0) {
+                    notificationsContent.innerHTML = `
+                        <div class="empty-state">
+                            <i class="fas fa-bell"></i>
+                            <p>No notifications</p>
+                            <p class="subtitle">You're all caught up!</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                // Sort notifications by date (newest first)
+                notifications.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+                // Store notifications in a global variable for later access
+                window.currentNotifications = notifications;
+                
+                notificationsContent.innerHTML = notifications.map((notification, index) => {
+                    // Check if this notification has been read
+                    const isRead = readNotifications.includes(notification.timestamp);
+                    const readClass = isRead ? 'read' : 'unread';
+                    
+                    return `
+                    <div class="notification-item ${readClass}" data-index="${index}">
+                        <div class="notification-icon ${getNotificationTypeClass(notification.type)}">
+                            ${getNotificationIcon(notification.type)}
+                        </div>
+                        <div class="notification-content">
+                            <div class="notification-title">${notification.type.replace('_', ' ').toUpperCase()}</div>
+                            <div class="notification-message">${notification.message}</div>
+                            <div class="notification-time">${formatTimestamp(notification.timestamp)}</div>
+                        </div>
+                    </div>
+                    `;
+                }).join('');
+            } catch (error) {
+                console.error('Failed to load notifications:', error);
+                document.getElementById('notificationsContent').innerHTML = `
+                    <div class="empty-state">
+                        <i class="fas fa-exclamation-circle"></i>
+                        <p>Error loading notifications</p>
+                        <p class="subtitle">Please try again later</p>
+                    </div>
+                `;
+            }
+        }
+
+        // Get icon based on notification type
+        function getNotificationIcon(type) {
+            switch (type) {
+                case 'attendance':
+                    return '<i class="fas fa-user-check"></i>';
+                case 'system':
+                    return '<i class="fas fa-cog"></i>';
+                case 'alert':
+                    return '<i class="fas fa-exclamation-triangle"></i>';
+                default:
+                    return '<i class="fas fa-bell"></i>';
+            }
+        }
+
+        // Get notification type class
+        function getNotificationTypeClass(type) {
+            if (type.includes('attendance')) return 'attendance';
+            if (type.includes('system')) return 'system';
+            if (type.includes('alert')) return 'alert';
+            return '';
+        }
+
+        // Format timestamp to relative time
+        function formatTimestamp(timestamp) {
+            const date = new Date(timestamp);
+            const now = new Date();
+            const diff = now - date;
+            const minutes = Math.floor(diff / 60000);
+            const hours = Math.floor(minutes / 60);
+            const days = Math.floor(hours / 24);
+
+            if (minutes < 1) return 'Just now';
+            if (minutes < 60) return `${minutes} minutes ago`;
+            if (hours < 24) return `${hours} hours ago`;
+            if (days === 1) return 'Yesterday';
+            return date.toLocaleDateString();
+        }
+
+        // Mark all notifications as read - disabled for now
+        function markAllRead() {
+            const token = localStorage.getItem('auth_token');
+            
+            // Show loading state
+            const markAllReadBtn = document.querySelector('.mark-all-read');
+            const originalText = markAllReadBtn.innerHTML;
+            markAllReadBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Marking as read...';
+            markAllReadBtn.style.pointerEvents = 'none';
+            
+            // Call the API to mark all as read
+            fetch('/api/admin/notifications/mark-all-read', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Failed to mark notifications as read');
+                }
+                return response.json();
+            })
+            .then(data => {
+                console.log('Notifications marked as read:', data);
+                
+                // Get all notifications and their timestamps
+                const notificationElements = document.querySelectorAll('.notification-item');
+                const allTimestamps = [];
+                
+                // Get timestamps from the global notifications variable
+                if (window.currentNotifications && window.currentNotifications.length > 0) {
+                    window.currentNotifications.forEach(notification => {
+                        allTimestamps.push(notification.timestamp);
+                    });
+                }
+                
+                // Update UI to show all notifications as read
+                notificationElements.forEach(notification => {
+                    notification.classList.remove('unread');
+                    notification.classList.add('read');
+                });
+                
+                // Save read status to localStorage
+                localStorage.setItem('read_notifications', JSON.stringify(allTimestamps));
+                
+                // Clear unread count
+                document.getElementById('unreadCount').textContent = '';
+                
+                // Show success message
+                const successMessage = document.createElement('div');
+                successMessage.className = 'alert-success';
+                successMessage.style.padding = '10px';
+                successMessage.style.backgroundColor = '#d4edda';
+                successMessage.style.color = '#155724';
+                successMessage.style.borderRadius = '4px';
+                successMessage.style.marginBottom = '15px';
+                successMessage.innerHTML = '<i class="fas fa-check-circle"></i> All notifications marked as read';
+                
+                const notificationsContent = document.getElementById('notificationsContent');
+                notificationsContent.insertBefore(successMessage, notificationsContent.firstChild);
+                
+                // Remove success message after 3 seconds
+                setTimeout(() => {
+                    successMessage.style.opacity = '0';
+                    successMessage.style.transition = 'opacity 0.5s ease';
+                    setTimeout(() => successMessage.remove(), 500);
+                }, 3000);
+                
+                // Reset button
+                markAllReadBtn.innerHTML = originalText;
+                markAllReadBtn.style.pointerEvents = 'auto';
+            })
+            .catch(error => {
+                console.error('Error marking notifications as read:', error);
+                alert('Failed to mark notifications as read. Please try again.');
+                
+                // Reset button
+                markAllReadBtn.innerHTML = originalText;
+                markAllReadBtn.style.pointerEvents = 'auto';
+            });
+        }
+
+        // Initialize page
+        window.onload = function() {
+            checkLogin();
+            loadNotifications();
+        };
+    </script>
+</body>
+</html> 

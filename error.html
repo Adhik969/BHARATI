@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Error - BHARATI Management System</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <style>
+        body {
+            background-color: #f8f9fa;
+            font-family: 'Arial', sans-serif;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+        }
+        
+        .error-container {
+            max-width: 600px;
+            width: 100%;
+            background-color: #fff;
+            border-radius: 10px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .error-icon {
+            font-size: 80px;
+            color: #dc3545;
+            margin-bottom: 20px;
+        }
+        
+        .error-title {
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 15px;
+            color: #333;
+        }
+        
+        .error-message {
+            font-size: 18px;
+            color: #666;
+            margin-bottom: 30px;
+        }
+        
+        .error-details {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            text-align: left;
+            margin-bottom: 20px;
+            display: none;
+        }
+        
+        .error-details.show {
+            display: block;
+        }
+        
+        .btn-home {
+            background-color: #1a73e8;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 5px;
+            text-decoration: none;
+            transition: background-color 0.3s;
+        }
+        
+        .btn-home:hover {
+            background-color: #0d47a1;
+            color: white;
+            text-decoration: none;
+        }
+        
+        .btn-details {
+            background-color: transparent;
+            color: #6c757d;
+            border: none;
+            text-decoration: underline;
+            cursor: pointer;
+            margin-top: 15px;
+        }
+    </style>
+</head>
+<body>
+    <div class="error-container">
+        <div class="error-icon">
+            <i class="fas fa-exclamation-triangle"></i>
+        </div>
+        
+        <h1 class="error-title">Oops! Something went wrong</h1>
+        
+        <p class="error-message">
+            We're experiencing some technical difficulties.
+            <br>
+            Please try again later or contact support if the problem persists.
+        </p>
+        
+        <div id="errorDetails" class="error-details">
+            <p><strong>Error Code:</strong> <span id="errorCode">Unknown</span></p>
+            <p><strong>Error Message:</strong> <span id="errorMessage">No additional information available</span></p>
+            <p><strong>Time:</strong> <span id="errorTime"></span></p>
+        </div>
+        
+        <a href="/" class="btn-home">
+            <i class="fas fa-home"></i> Return to Home
+        </a>
+        
+        <div>
+            <button id="showDetails" class="btn-details">
+                Show Technical Details
+            </button>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Get error details from URL parameters
+            const urlParams = new URLSearchParams(window.location.search);
+            const errorCode = urlParams.get('code') || 'Unknown';
+            const errorMessage = urlParams.get('message') || 'No additional information available';
+            
+            // Set error details
+            document.getElementById('errorCode').textContent = errorCode;
+            document.getElementById('errorMessage').textContent = errorMessage;
+            document.getElementById('errorTime').textContent = new Date().toLocaleString();
+            
+            // Toggle error details visibility
+            document.getElementById('showDetails').addEventListener('click', function() {
+                const detailsElement = document.getElementById('errorDetails');
+                detailsElement.classList.toggle('show');
+                
+                if (detailsElement.classList.contains('show')) {
+                    this.textContent = 'Hide Technical Details';
+                } else {
+                    this.textContent = 'Show Technical Details';
+                }
+            });
+        });
+    </script>
+</body>
+</html> 

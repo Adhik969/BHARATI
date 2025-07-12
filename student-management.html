@@ -1,0 +1,2415 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <title>Student Management - Student Attendance Management System</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <!-- Update script reference to use absolute path -->
+    <script src="/BHARATI/assets/js/common.js"></script>
+    <!-- Fallback script in case the above fails -->
+    <script>
+        // Check if common.js failed to load
+        window.addEventListener('error', function(e) {
+            if (e.target.tagName === 'SCRIPT' && e.target.src.includes('common.js')) {
+                console.log('Attempting to load common.js from alternate path');
+                // Try loading from different paths
+                const alternativePaths = [
+                    './assets/js/common.js',
+                    '../assets/js/common.js',
+                    '/assets/js/common.js'
+                ];
+                
+                // Try each path
+                for (const path of alternativePaths) {
+                    const script = document.createElement('script');
+                    script.src = path;
+                    document.head.appendChild(script);
+                    console.log('Trying to load from:', path);
+                }
+            }
+        }, true);
+    </script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background: #f0f2f5;
+        }
+
+        .navbar {
+            background: #2c3e50;
+            padding: 1rem;
+            color: white;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            margin-bottom: 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .navbar h1 {
+            margin: 0;
+            font-size: 1.5rem;
+        }
+
+        .navbar-right {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 5px;
+        }
+
+        .user-info i {
+            font-size: 1.2rem;
+        }
+
+        .logout-btn {
+            padding: 0.5rem 1rem;
+            background: #e74c3c;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: background 0.3s ease;
+        }
+
+        .logout-btn:hover {
+            background: #c0392b;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .action-btn {
+            padding: 0.5rem;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 36px;
+            height: 36px;
+            transition: all 0.3s ease;
+        }
+
+        .edit-btn {
+            background: #f1c40f;
+            color: white;
+        }
+
+        .edit-btn:hover {
+            background: #f39c12;
+            transform: translateY(-2px);
+        }
+
+        .delete-btn {
+            background: #e74c3c;
+            color: white;
+        }
+
+        .delete-btn:hover {
+            background: #c0392b;
+            transform: translateY(-2px);
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 1rem;
+        }
+
+        .add-student-form {
+            background: white;
+            padding: 2rem;
+            border-radius: 10px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            margin-bottom: 2rem;
+        }
+
+        .form-row {
+            margin-bottom: 20px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .form-group {
+            flex: 1;
+            min-width: 250px; /* Ensures inputs don't get too small on mobile */
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: #2c3e50;
+            font-weight: bold;
+        }
+
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 0.8rem;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 1rem;
+        }
+
+        .student-list {
+            background: white;
+            padding: 2rem;
+            border-radius: 10px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            margin-bottom: 2rem;
+        }
+
+        .search-bar {
+            margin-bottom: 2rem;
+        }
+
+        .search-bar input {
+            width: 100%;
+            padding: 0.8rem;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 1rem;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th, td {
+            padding: 1rem;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+
+        th {
+            background: #f8f9fa;
+            color: #2c3e50;
+        }
+
+        .btn {
+            display: inline-block;
+            padding: 0.8rem 1.5rem;
+            background: #3498db;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            transition: background 0.3s ease;
+            border: none;
+            cursor: pointer;
+            font-size: 1rem;
+        }
+
+        .btn:hover {
+            background: #2980b9;
+        }
+
+        .back-btn {
+            background: #95a5a6;
+            margin-right: 1rem;
+        }
+
+        .back-btn:hover {
+            background: #7f8c8d;
+        }
+
+        .footer {
+            background: #2c3e50;
+            color: white;
+            text-align: center;
+            padding: 1rem;
+            position: fixed;
+            bottom: 0;
+            width: 100%;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 2rem !important;
+        }
+
+        .empty-state-content {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .empty-state-content i {
+            font-size: 3rem;
+            color: #95a5a6;
+        }
+
+        .empty-state-content p {
+            margin: 0;
+            color: #2c3e50;
+        }
+
+        .empty-state-subtitle {
+            font-size: 0.9rem;
+            color: #7f8c8d !important;
+        }
+
+        .search-no-results {
+            text-align: center;
+            padding: 1rem;
+            color: #7f8c8d;
+        }
+
+        .import-section {
+            margin-bottom: 1rem;
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+
+        .import-btn {
+            background: #27ae60;
+            color: white;
+            padding: 0.8rem 1.5rem;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 1rem;
+            transition: background 0.3s ease;
+        }
+
+        .import-btn:hover {
+            background: #219a52;
+        }
+
+        .import-btn i {
+            font-size: 1.2rem;
+        }
+
+        .download-template {
+            color: #3498db;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .download-template:hover {
+            text-decoration: underline;
+        }
+
+        .import-error {
+            color: #e74c3c;
+            margin-top: 0.5rem;
+            display: none;
+        }
+
+        .subject-list {
+            max-height: 300px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+        }
+
+        .subject-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px;
+            margin: 5px 0;
+            background: #f8f9fa;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        .subject-item:hover {
+            background: #e9ecef;
+        }
+
+        .subject-item.selected {
+            background: #cce5ff;
+        }
+
+        .subject-info {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .subject-code {
+            font-weight: bold;
+            min-width: 80px;
+        }
+
+        .subject-name {
+            flex-grow: 1;
+        }
+
+        .subject-credits {
+            min-width: 60px;
+            text-align: right;
+        }
+
+        .import-section {
+            margin-bottom: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 4px;
+        }
+
+        .import-section small {
+            display: block;
+            margin: 5px 0;
+            color: #666;
+        }
+
+        .department-options,
+        .class-options {
+            display: grid;
+            gap: 10px;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 5px;
+            border: 1px solid #e0e0e0;
+        }
+
+        .department-options {
+            grid-template-columns: repeat(2, 1fr);
+        }
+
+        .class-options {
+            grid-template-columns: repeat(3, 1fr);
+        }
+
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px;
+            background: white;
+            border-radius: 4px;
+            border: 1px solid #e0e0e0;
+            transition: all 0.3s ease;
+        }
+
+        .checkbox-group:hover {
+            background: #f0f7ff;
+            border-color: #1a73e8;
+        }
+
+        .checkbox-group input[type="radio"] {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+
+        .checkbox-group label {
+            cursor: pointer;
+            font-size: 14px;
+            color: #2c3e50;
+            margin: 0;
+        }
+
+        .checkbox-group input[type="radio"]:checked + label {
+            color: #1a73e8;
+            font-weight: 500;
+        }
+
+        .checkbox-group:has(input[type="radio"]:checked) {
+            background: #e8f0fe;
+            border-color: #1a73e8;
+        }
+
+        /* Add styles for roll number input */
+        input[type="number"] {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        input[type="number"]:focus {
+            border-color: #1a73e8;
+            outline: none;
+            box-shadow: 0 0 0 2px rgba(26, 115, 232, 0.2);
+        }
+
+        /* Remove spinner buttons from number input */
+        input[type="number"]::-webkit-inner-spin-button,
+        input[type="number"]::-webkit-outer-spin-button {
+            -webkit-appearance: none;
+            appearance: none;
+            margin: 0;
+        }
+
+        input[type="number"] {
+            -moz-appearance: textfield;
+        }
+
+        /* Add styles for subjects section */
+        .subjects-options {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 5px;
+            border: 1px solid #e0e0e0;
+        }
+
+        .subjects-options .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px;
+            background: white;
+            border-radius: 4px;
+            border: 1px solid #e0e0e0;
+            transition: all 0.3s ease;
+        }
+
+        .subjects-options .checkbox-group:hover {
+            background: #f0f7ff;
+            border-color: #1a73e8;
+        }
+
+        .subjects-options .checkbox-group input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+
+        .subjects-options .checkbox-group label {
+            cursor: pointer;
+            font-size: 14px;
+            color: #2c3e50;
+            margin: 0;
+        }
+
+        .subjects-options .checkbox-group input[type="checkbox"]:checked + label {
+            color: #1a73e8;
+            font-weight: 500;
+        }
+
+        .subjects-options .checkbox-group:has(input[type="checkbox"]:checked) {
+            background: #e8f0fe;
+            border-color: #1a73e8;
+        }
+
+        /* Add these new styles */
+        .table-responsive {
+            overflow-x: auto;
+            margin-bottom: 1rem;
+        }
+
+        .badge {
+            padding: 0.3rem 0.6rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 500;
+            text-transform: uppercase;
+        }
+
+        .badge-primary {
+            background: #3498db;
+            color: white;
+        }
+
+        .badge-info {
+            background: #2ecc71;
+            color: white;
+        }
+
+        .student-info {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .student-name {
+            font-weight: 500;
+        }
+
+        .student-roll {
+            color: #7f8c8d;
+            font-size: 0.9rem;
+        }
+
+        td {
+            vertical-align: middle;
+        }
+
+        .radio-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+            margin-top: 0.5rem;
+        }
+
+        .radio-label {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            cursor: pointer;
+            padding: 0.5rem 1rem;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            transition: all 0.3s ease;
+        }
+
+        .radio-label:hover {
+            background: #f8f9fa;
+        }
+
+        .radio-label input[type="radio"] {
+            margin: 0;
+        }
+
+        .radio-label input[type="radio"]:checked + .radio-label {
+            background: #3498db;
+            color: white;
+            border-color: #3498db;
+        }
+
+        /* Required field indicator */
+        label[for]:after {
+            content: "*";
+            color: #e74c3c;
+            margin-left: 4px;
+        }
+
+        .radio-group[data-required="true"].error {
+            border: 1px solid #e74c3c;
+            border-radius: 5px;
+            padding: 5px;
+        }
+
+        .error-message {
+            font-size: 0.9rem;
+            margin-top: 5px;
+            display: none;
+        }
+
+        .form-group.required .required-label::after {
+            content: " *";
+            color: red;
+            font-weight: bold;
+        }
+
+        .error-text {
+            color: red;
+            font-size: 0.8em;
+            margin-top: 5px;
+            display: none;
+        }
+
+        .radio-group.error {
+            border: 2px solid red;
+            padding: 10px;
+            border-radius: 5px;
+        }
+
+        .form-group.required .radio-label {
+            position: relative;
+        }
+
+        .form-group.required .radio-label input[type="radio"] {
+            position: relative;
+        }
+
+        .form-group.required .radio-label input[type="radio"]:required {
+            outline: none;
+        }
+
+        .form-group.required .radio-label input[type="radio"]:required:invalid {
+            outline: 2px solid red;
+        }
+
+        /* Error states */
+        input.error {
+            border: 2px solid #ff4444;
+        }
+
+        .radio-group.error {
+            border: 2px solid #ff4444;
+            border-radius: 4px;
+            padding: 8px;
+        }
+
+        /* Loading state */
+        button[type="submit"]:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+
+        /* Success state */
+        .success-message {
+            color: #28a745;
+            margin-top: 10px;
+            padding: 10px;
+            border-radius: 4px;
+            background-color: #d4edda;
+            border: 1px solid #c3e6cb;
+        }
+
+        /* Error message */
+        .error-message {
+            color: #dc3545;
+            margin-top: 10px;
+            padding: 10px;
+            border-radius: 4px;
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+        }
+
+        /* Student Import Section Styles */
+        .student-import-section {
+            background: white;
+            padding: 2rem;
+            border-radius: 10px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            margin-bottom: 2rem;
+        }
+
+        .student-import-section h2 {
+            margin-bottom: 1rem;
+            color: #2c3e50;
+        }
+
+        .student-import-section p {
+            margin-bottom: 1.5rem;
+            color: #7f8c8d;
+        }
+
+        .import-controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .file-upload-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            flex: 1;
+        }
+
+        #selectedFileName {
+            color: #7f8c8d;
+            font-style: italic;
+        }
+
+        .import-btn {
+            background-color: #27ae60;
+        }
+
+        .import-btn:hover {
+            background-color: #219a52;
+        }
+
+        .import-status {
+            margin-top: 1.5rem;
+        }
+
+        .progress-bar {
+            height: 10px;
+            background-color: #ecf0f1;
+            border-radius: 5px;
+            overflow: hidden;
+            margin-bottom: 0.5rem;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background-color: #3498db;
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        .status-message {
+            text-align: center;
+            color: #2c3e50;
+        }
+
+        .results-summary {
+            display: flex;
+            gap: 2rem;
+            margin-bottom: 1rem;
+        }
+
+        .result-item {
+            padding: 0.5rem 1rem;
+            border-radius: 5px;
+            background-color: #f8f9fa;
+        }
+
+        .result-label {
+            font-weight: bold;
+            margin-right: 0.5rem;
+        }
+
+        .error-list {
+            max-height: 200px;
+            overflow-y: auto;
+            border: 1px solid #ecf0f1;
+            border-radius: 5px;
+            padding: 1rem;
+        }
+
+        .error-item {
+            padding: 0.5rem;
+            border-bottom: 1px solid #ecf0f1;
+        }
+
+        .error-item:last-child {
+            border-bottom: none;
+        }
+
+        /* Add these new styles for the delete all button */
+        .actions-bar {
+            display: flex;
+            justify-content: flex-end;
+            margin-bottom: 1rem;
+        }
+
+        .delete-all-btn {
+            background-color: #e74c3c;
+            color: white;
+            padding: 0.5rem 1rem;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: background-color 0.3s ease;
+        }
+
+        .delete-all-btn:hover {
+            background-color: #c0392b;
+        }
+
+        .confirmation-dialog {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .confirmation-content {
+            background-color: white;
+            padding: 2rem;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            max-width: 500px;
+            width: 90%;
+        }
+
+        .confirmation-title {
+            color: #e74c3c;
+            margin-bottom: 1rem;
+            font-size: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .confirmation-message {
+            margin-bottom: 1.5rem;
+            color: #333;
+            line-height: 1.6;
+        }
+
+        .confirmation-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 1rem;
+        }
+
+        .btn-cancel {
+            background-color: #95a5a6;
+        }
+
+        .btn-cancel:hover {
+            background-color: #7f8c8d;
+        }
+
+        .btn-danger {
+            background-color: #e74c3c;
+        }
+
+        .btn-danger:hover {
+            background-color: #c0392b;
+        }
+
+        /* Responsive styles for mobile */
+        @media (max-width: 768px) {
+            .navbar {
+                flex-direction: column;
+                gap: 1rem;
+                padding: 1rem 0.5rem;
+            }
+            
+            .navbar-right {
+                width: 100%;
+                justify-content: center;
+            }
+            
+            .container {
+                padding: 0 0.5rem;
+            }
+            
+            .add-student-form, 
+            .student-list {
+                padding: 1rem;
+            }
+            
+            .form-row {
+                flex-direction: column;
+                gap: 1rem;
+            }
+            
+            .form-group {
+                width: 100%;
+            }
+            
+            /* Make tables responsive */
+            table {
+                display: block;
+                overflow-x: auto;
+                white-space: nowrap;
+            }
+            
+            th, td {
+                padding: 0.75rem;
+            }
+            
+            .btn {
+                padding: 0.7rem 1.2rem;
+                font-size: 0.9rem;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .navbar h1 {
+                font-size: 1.2rem;
+            }
+            
+            .user-info {
+                font-size: 0.9rem;
+                padding: 0.4rem 0.8rem;
+            }
+            
+            .logout-btn {
+                padding: 0.4rem 0.8rem;
+                font-size: 0.9rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <h1>Student Management</h1>
+        <div class="navbar-right">
+            <div class="user-info">
+                <i class="fas fa-user"></i>
+                <span id="userName">Admin</span>
+            </div>
+            <button onclick="logout()" class="logout-btn">
+                <i class="fas fa-sign-out-alt"></i>
+                Logout
+            </button>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="add-student-form">
+            <h2>Add New Student</h2>
+            <form id="studentForm" onsubmit="handleSubmit(event)">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="name">Full Name</label>
+                        <input type="text" id="name" name="name" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="rollNo">Roll Number</label>
+                        <input type="text" id="rollNo" name="rollNo" required>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="email">Email</label>
+                        <input type="email" id="email" name="email" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="mobile">Mobile</label>
+                        <input type="tel" id="mobile" name="mobile" pattern="[0-9]{10}" required>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="department">Department</label>
+                        <select id="department" name="department" multiple required>
+                            <option value="Computer Engineering">Computer Engineering</option>
+                            <option value="Information Technology">Information Technology</option>
+                            <option value="Electronics & Communication">Electronics & Communication</option>
+                            <option value="Mechanical Engineering">Mechanical Engineering</option>
+                            <option value="Civil Engineering">Civil Engineering</option>
+                            <option value="Electrical Engineering">Electrical Engineering</option>
+                            <option value="Artificial Intelligence">Artificial Intelligence</option>
+                        </select>
+                        <small>Hold Ctrl/Cmd to select multiple</small>
+                    </div>
+                    <div class="form-group">
+                        <label for="class">Class</label>
+                        <select id="class" name="class" multiple required>
+                            <option value="First Year">First Year</option>
+                            <option value="Second Year">Second Year</option>
+                            <option value="Third Year">Third Year</option>
+                            <option value="Fourth Year">Fourth Year</option>
+                        </select>
+                        <small>Hold Ctrl/Cmd to select multiple</small>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="division">Division</label>
+                        <select id="division" name="division" multiple>
+                            <option value="A">A</option>
+                            <option value="B">B</option>
+                            <option value="C">C</option>
+                        </select>
+                        <small>Hold Ctrl/Cmd to select multiple (Optional)</small>
+                    </div>
+                    <div class="form-group">
+                        <label for="password">Password</label>
+                        <input type="password" id="password" name="password" required>
+                    </div>
+                </div>
+                
+                <div class="alert alert-info" style="margin-bottom: 20px;">
+                    <strong>Teacher Assignment Information:</strong>
+                    <p>Students are automatically assigned to teachers based on matching department, class, and division values:</p>
+                    <ul>
+                        <li>Teachers will see students who match their assigned departments AND classes</li>
+                        <li>If a teacher has divisions specified, they will only see students in those divisions</li>
+                        <li>If a teacher has no divisions specified, they will see students from all divisions</li>
+                    </ul>
+                    <p>To ensure a student appears for the right teachers, carefully select the appropriate department, class, and division values.</p>
+                </div>
+                
+                <button type="submit" class="btn">Add Student</button>
+            </form>
+        </div>
+
+        <!-- Add Student Import Section -->
+        <div class="student-import-section">
+            <h2>Import Students</h2>
+            <p>Bulk import students from an Excel file. Download the template below and fill it with student data.</p>
+            
+            <div class="import-controls">
+                <button class="btn" onclick="downloadTemplate()">
+                    <i class="fas fa-download"></i> Download Template
+                </button>
+                
+                <div class="file-upload-wrapper">
+                    <label for="excelFileInput" class="btn import-btn">
+                        <i class="fas fa-file-excel"></i> Select Excel File
+                    </label>
+                    <input type="file" id="excelFileInput" accept=".xlsx, .xls" style="display: none;" onchange="handleFileUpload(event)">
+                    <span id="selectedFileName">No file selected</span>
+                </div>
+                
+                <button class="btn" id="importStudentsBtn" onclick="importStudents()" disabled>
+                    <i class="fas fa-upload"></i> Import Students
+                </button>
+            </div>
+            
+            <div class="import-status" style="display: none;">
+                <div class="progress-bar">
+                    <div class="progress-fill"></div>
+                </div>
+                <p class="status-message">Processing...</p>
+            </div>
+            
+            <div id="importResults" style="display: none;">
+                <h3>Import Results</h3>
+                <div class="results-summary">
+                    <div class="result-item">
+                        <span class="result-label">Total Records:</span>
+                        <span class="result-value" id="totalRecords">0</span>
+                    </div>
+                    <div class="result-item">
+                        <span class="result-label">Successfully Imported:</span>
+                        <span class="result-value" id="successCount">0</span>
+                    </div>
+                    <div class="result-item">
+                        <span class="result-label">Failed:</span>
+                        <span class="result-value" id="failCount">0</span>
+                    </div>
+                </div>
+                <div class="error-list" id="errorList"></div>
+            </div>
+        </div>
+
+        <div class="student-list">
+            <h2>Student List</h2>
+            <div class="search-bar">
+                <input type="text" id="searchInput" placeholder="Search students...">
+            </div>
+            <div class="actions-bar">
+                <button id="deleteAllStudentsBtn" class="btn delete-all-btn" onclick="confirmDeleteAllStudents()">
+                    <i class="fas fa-trash-alt"></i> Delete All Students
+                </button>
+            </div>
+            <div class="table-responsive">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Student Details</th>
+                            <th>Roll No</th>
+                            <th>Class/Year</th>
+                            <th>Department</th>
+                            <th>Division</th>
+                            <th>Contact Info</th>
+                            <th>Subjects</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="studentTableBody">
+                        <!-- Students will be loaded here -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="modal" id="enrollSubjectsModal">
+            <div class="modal-content">
+                <span class="close-modal" onclick="closeModal('enrollSubjectsModal')">&times;</span>
+                <h2>Enroll Subjects</h2>
+                <div class="form-group">
+                    <label>Available Subjects:</label>
+                    <div id="availableSubjects" class="subject-list">
+                        <!-- Subjects will be populated here -->
+                    </div>
+                </div>
+                <div class="modal-buttons">
+                    <button class="btn btn-secondary" onclick="closeModal('enrollSubjectsModal')">Cancel</button>
+                    <button class="btn btn-primary" onclick="saveEnrolledSubjects()">Save</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer class="footer">
+        <p>&copy; 2024 Diploma Student Attendance Management System</p>
+    </footer>
+
+    <script>
+        // Define API base URL
+        const API_BASE_URL = '';  // Empty string means use relative URLs
+
+        // Global state for selected items
+        const state = {
+            departments: new Set(),
+            classes: new Set(),
+            divisions: new Set()
+        };
+
+        // Authentication functions
+        function getAuthToken() {
+            return localStorage.getItem('auth_token');
+        }
+
+        function getUser() {
+            return {
+                role: localStorage.getItem('user_role'),
+                name: localStorage.getItem('user_name'),
+                id: localStorage.getItem('user_id'),
+                username: localStorage.getItem('username')
+            };
+        }
+
+        function logout() {
+            localStorage.clear();
+            window.location.href = '/login.html';
+        }
+
+        function checkAuth() {
+            const token = getAuthToken();
+            const user = getUser();
+
+            if (!token || !user.role) {
+                window.location.href = '/login.html';
+                return false;
+            }
+
+            if (user.role !== 'admin') {
+                alert('Only administrators can access this page');
+                window.location.href = '/login.html';
+                return false;
+            }
+
+            return true;
+        }
+
+        // Load students with proper error handling
+        async function loadStudents() {
+            const loadingOverlay = document.getElementById('loadingOverlay');
+            if (loadingOverlay) loadingOverlay.style.display = 'flex';
+
+            try {
+                if (!checkAuth()) return;
+
+                console.log('Fetching students...');
+                const response = await fetch(`${API_BASE_URL}/api/admin/students`, {
+                    headers: {
+                        'Authorization': `Bearer ${getAuthToken()}`
+                    }
+                });
+
+                console.log('Response status:', response.status);
+                const data = await response.json();
+                console.log('Response data:', data);
+
+                if (!response.ok) {
+                    if (response.status === 401) {
+                        console.log('Unauthorized access, redirecting to login');
+                        logout();
+                        return;
+                    }
+                    throw new Error(data.message || 'Failed to load students');
+                }
+
+                displayStudents(data);
+            } catch (error) {
+                console.error('Error loading students:', error);
+                showError(error.message || 'Failed to load students. Please try again.');
+            } finally {
+                if (loadingOverlay) loadingOverlay.style.display = 'none';
+            }
+        }
+
+        function displayStudents(students) {
+            const studentList = document.querySelector('#studentTableBody');
+            if (!studentList) {
+                console.error('Student table body not found');
+                return;
+            }
+
+            if (!students || students.length === 0) {
+                studentList.innerHTML = `
+                    <tr>
+                        <td colspan="8" class="empty-state">
+                            <div class="empty-state-content">
+                                <i class="fas fa-users"></i>
+                                <p>No students found</p>
+                                <p class="empty-state-subtitle">Add students using the form above</p>
+                            </div>
+                        </td>
+                    </tr>`;
+                return;
+            }
+
+            studentList.innerHTML = students.map(student => `
+                <tr>
+                    <td>
+                        <div class="student-info">
+                            <i class="fas fa-user-graduate"></i>
+                            <div>
+                                <div class="student-name">${student.name || 'N/A'}</div>
+                                <div class="student-roll">Roll No: ${student.rollNo || 'N/A'}</div>
+                            </div>
+                        </div>
+                    </td>
+                    <td><strong>${student.rollNo || 'N/A'}</strong></td>
+                    <td>${student.classes && student.classes.length > 0 ? student.classes[0] : 'N/A'}</td>
+                    <td>${Array.isArray(student.department) ? student.department[0] : (student.department || 'N/A')}</td>
+                    <td>${Array.isArray(student.divisions) ? student.divisions[0] : (student.divisions || 'N/A')}</td>
+                    <td>
+                        <div>
+                            <div>${student.email || 'N/A'}</div>
+                            <div class="student-roll">${student.mobile || 'No phone'}</div>
+                        </div>
+                    </td>
+                    <td>
+                        <div class="action-buttons">
+                            <button class="action-btn edit-btn" onclick="editStudent('${student._id}')" title="Edit Student">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="action-btn delete-btn" onclick="deleteStudent('${student._id}')" title="Delete Student">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        // Initialize page
+        document.addEventListener('DOMContentLoaded', async function() {
+            console.log('Page loading...');
+            if (!checkAuth()) {
+                console.log('Auth check failed');
+                return;
+            }
+            
+            // Update user info in header
+            const user = getUser();
+            const userNameElement = document.getElementById('userName');
+            if (userNameElement && user.name) {
+                userNameElement.textContent = user.name || user.username;
+            }
+            
+            console.log('Loading students...');
+            // Load student list
+            await loadStudents();
+            
+            // Add form submit handler
+            const studentForm = document.getElementById('studentForm');
+            if (studentForm) {
+                studentForm.addEventListener('submit', handleStudentSubmit);
+            } else {
+                console.error('Student form not found in the DOM');
+            }
+
+            // Setup search functionality
+            const searchInput = document.getElementById('searchInput');
+            if (searchInput) {
+                searchInput.addEventListener('input', handleSearch);
+            }
+
+            // Setup Excel file import
+            const excelFileInput = document.getElementById('excelFileInput');
+            if (excelFileInput) {
+                excelFileInput.addEventListener('change', handleFileUpload);
+            }
+
+            // Setup subject filtering if needed
+            const classSelect = document.getElementById('class');
+            if (classSelect) {
+                setupSubjectFiltering(); // Initialize subject filtering
+            }
+        });
+
+        // Edit student
+        async function editStudent(studentId) {
+            if (!checkAuth()) return;
+            
+            try {
+                const token = getAuthToken();
+                // Fix: Use the correct API endpoint for fetching student details
+                const response = await fetch(`${API_BASE_URL}/api/student/${studentId}`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (!response.ok) {
+                    if (response.status === 401) {
+                        logout();
+                        return;
+                    }
+                    throw new Error('Failed to fetch student details');
+                }
+
+                const student = await response.json();
+
+                // Populate form with student data
+                document.getElementById('name').value = student.name || '';
+                document.getElementById('rollNo').value = student.rollNo || '';
+                
+                // Set department radio button
+                const department = Array.isArray(student.department) ? student.department[0] : student.department;
+                const departmentRadio = document.querySelector(`input[name="department"][value="${department}"]`);
+                if (departmentRadio) departmentRadio.checked = true;
+                
+                // Set class radio button
+                const classYear = Array.isArray(student.classes) ? student.classes[0] : student.class;
+                const classRadio = document.querySelector(`input[name="class"][value="${classYear}"]`);
+                if (classRadio) classRadio.checked = true;
+                
+                // Set division radio button if exists
+                const division = Array.isArray(student.division) ? student.division[0] : student.division;
+                if (division) {
+                    const divisionRadio = document.querySelector(`input[name="division"][value="${division}"]`);
+                    if (divisionRadio) divisionRadio.checked = true;
+                }
+
+                // Store student ID for update
+                document.getElementById('studentForm').dataset.editId = studentId;
+                
+                // Change submit button text
+                const submitBtn = document.querySelector('#studentForm button[type="submit"]');
+                if (submitBtn) submitBtn.textContent = 'Update Student';
+                
+                // Scroll to form
+                document.querySelector('.add-student-form').scrollIntoView({ behavior: 'smooth' });
+            } catch (error) {
+                console.error('Error fetching student details:', error);
+                alert('Error fetching student details. Please try again.');
+            }
+        }
+
+        // Delete student function
+        async function deleteStudent(studentId) {
+            if (!checkAuth()) return;
+            
+            // Confirm deletion
+            if (!confirm('Are you sure you want to delete this student? This action cannot be undone.')) {
+                return;
+            }
+            
+            try {
+                const token = getAuthToken();
+                const response = await fetch(`${API_BASE_URL}/api/admin/students/${studentId}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                if (!response.ok) {
+                    if (response.status === 401) {
+                        logout();
+                        return;
+                    }
+                    
+                    const errorData = await response.json();
+                    throw new Error(errorData.message || 'Failed to delete student');
+                }
+
+                // Show success message
+                alert('Student deleted successfully');
+                
+                // Reload student list
+                await loadStudents();
+            } catch (error) {
+                console.error('Error deleting student:', error);
+                alert('Error deleting student: ' + error.message);
+            }
+        }
+
+        // Check if roll number exists
+        async function checkRollNumberExists(rollNo) {
+            try {
+                const token = getAuthToken();
+                const response = await fetch(`${API_BASE_URL}/api/students`, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (!response.ok) {
+                    if (response.status === 401) {
+                        logout();
+                        return true; // Return true to prevent form submission
+                    }
+                    throw new Error('Failed to check roll number');
+                }
+
+                const students = await response.json();
+                return students.some(student => student.rollNo === rollNo);
+            } catch (error) {
+                console.error('Error checking roll number:', error);
+                return false; // Allow form submission if check fails
+            }
+        }
+
+        // Update handleStudentSubmit function
+        async function handleStudentSubmit(event) {
+            event.preventDefault();
+            if (!checkAuth()) return;
+
+            try {
+                // Get form values with proper trimming
+                const name = document.getElementById('name').value.trim();
+                const rollNo = document.getElementById('rollNo').value.trim();
+                const department = document.querySelector('input[name="department"]:checked')?.value?.trim();
+                const classYear = document.querySelector('input[name="class"]:checked')?.value?.trim();
+                const division = document.querySelector('input[name="division"]:checked')?.value?.trim() || null;
+
+                // Clear any previous error styling
+                document.querySelectorAll('.radio-group').forEach(group => group.classList.remove('error'));
+                document.querySelectorAll('input').forEach(input => input.classList.remove('error'));
+                document.querySelectorAll('.error-message').forEach(msg => msg.remove());
+
+                // Validate required fields
+                const missingFields = [];
+                if (!name) {
+                    missingFields.push('Student Name');
+                    document.getElementById('name').classList.add('error');
+                }
+                if (!rollNo) {
+                    missingFields.push('Roll Number');
+                    document.getElementById('rollNo').classList.add('error');
+                }
+                if (!department) {
+                    missingFields.push('Department');
+                    document.querySelector('.radio-group:has(input[name="department"])').classList.add('error');
+                }
+                if (!classYear) {
+                    missingFields.push('Class/Year');
+                    document.querySelector('.radio-group:has(input[name="class"])').classList.add('error');
+                }
+                if (!division) {
+                    missingFields.push('Division');
+                    document.querySelector('.radio-group:has(input[name="division"])').classList.add('error');
+                }
+
+                if (missingFields.length > 0) {
+                    alert(`Please fill in all required fields:\n${missingFields.join('\n')}`);
+                    return;
+                }
+
+                // Validate roll number format
+                if (!/^\d+$/.test(rollNo)) {
+                    document.getElementById('rollNo').classList.add('error');
+                    alert('Roll Number must contain only numbers');
+                    return;
+                }
+
+                // Check if roll number already exists (only for new students)
+                const studentId = event.target.dataset.editId;
+                const isEdit = !!studentId;
+                
+                if (!isEdit && await checkRollNumberExists(rollNo)) {
+                    document.getElementById('rollNo').classList.add('error');
+                    const errorDiv = document.createElement('div');
+                    errorDiv.className = 'error-message';
+                    errorDiv.textContent = `Roll Number ${rollNo} is already assigned to another student. Please use a different roll number.`;
+                    document.getElementById('rollNo').parentNode.appendChild(errorDiv);
+                    return;
+                }
+
+                // Rest of the validation
+                const validDepartments = [
+                    'Computer Engineering',
+                    'Information Technology',
+                    'Mechanical Engineering',
+                    'Electronics & Communication',
+                    'Electrical Engineering',
+                    'Civil Engineering',
+                    'Artificial Intelligence'
+                ];
+
+                if (!validDepartments.includes(department)) {
+                    document.querySelector('.radio-group:has(input[name="department"])').classList.add('error');
+                    alert('Please select a valid department');
+                    return;
+                }
+
+                // Validate class/year against valid values
+                const validClasses = ['First Year', 'Second Year', 'Third Year', 'Fourth Year'];
+                if (!validClasses.includes(classYear)) {
+                    document.querySelector('.radio-group:has(input[name="class"])').classList.add('error');
+                    alert('Please select a valid class/year');
+                    return;
+                }
+
+                // Validate division if provided
+                if (division && !['A', 'B', 'C'].includes(division)) {
+                    document.querySelector('.radio-group:has(input[name="division"])').classList.add('error');
+                    alert('Division must be A, B, or C');
+                    return;
+                }
+
+                // Create student data object with proper format
+                const studentData = {
+                    name: name.trim(),
+                    username: rollNo.trim(), // Use roll number as username
+                    password: rollNo.trim(), // Use roll number as initial password
+                    email: `${rollNo.trim()}@student.college.edu`, // Generate email from roll number
+                    mobile: document.getElementById('mobile').value.trim(),
+                    rollNo: rollNo.trim(),
+                    department: [department.trim()], // Send as array
+                    classes: [classYear.trim()], // Send as array
+                    divisions: [division.trim()], // Send as array
+                    role: 'student'
+                };
+
+                console.log('Starting form submission');
+                console.log('Sending student data:', studentData);
+
+                // Get auth token
+                const token = localStorage.getItem('auth_token');
+                if (!token) {
+                    throw new Error('Authentication token not found. Please log in again.');
+                }
+
+                // Show loading state
+                const submitBtn = event.target.querySelector('button[type="submit"]');
+                const originalBtnText = submitBtn.textContent;
+                submitBtn.disabled = true;
+                submitBtn.textContent = isEdit ? 'Updating...' : 'Adding...';
+
+                try {
+                    const response = await fetch(`${API_BASE_URL}/api/admin/students${isEdit ? `/${studentId}` : ''}`, {
+                        method: isEdit ? 'PUT' : 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${token}`,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(studentData)
+                    });
+
+                    const data = await response.json();
+                    console.log('Server response:', data);
+
+                    if (!response.ok) {
+                        if (response.status === 401) {
+                            logout();
+                            return;
+                        }
+                        throw new Error(data.message || `Failed to ${isEdit ? 'update' : 'add'} student`);
+                    }
+
+                    // Show success message
+                    showSuccess(`Student ${isEdit ? 'updated' : 'added'} successfully!`);
+                    
+                    // Clear form
+                    event.target.reset();
+                    
+                    // Reset edit state
+                    if (isEdit) {
+                        event.target.dataset.editId = '';
+                        submitBtn.textContent = 'Add Student';
+                    }
+                    
+                    // Clear selected departments, classes, and divisions
+                    state.departments.clear();
+                    state.classes.clear();
+                    state.divisions.clear();
+                    updateSelectedDepartments();
+                    updateSelectedClasses();
+                    updateSelectedDivisions();
+                    
+                    // Reload student list
+                    await loadStudents();
+                } catch (error) {
+                    console.error(`Error ${isEdit ? 'updating' : 'adding'} student:`, error);
+                    showError(error.message);
+                } finally {
+                    // Reset submit button
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = originalBtnText;
+                    console.log('Form submission completed');
+                }
+            } catch (error) {
+                console.error(`Error ${event.target.dataset.editId ? 'updating' : 'adding'} student:`, error);
+                
+                // Show error message
+                const errorDiv = document.createElement('div');
+                errorDiv.className = 'error-message';
+                errorDiv.textContent = error.message || `Error ${event.target.dataset.editId ? 'updating' : 'adding'} student. Please try again.`;
+                event.target.insertBefore(errorDiv, event.target.firstChild);
+                
+                // Reset submit button
+                const submitBtn = event.target.querySelector('button[type="submit"]');
+                submitBtn.textContent = event.target.dataset.editId ? 'Update Student' : 'Add Student';
+                submitBtn.disabled = false;
+
+                // Scroll to error message
+                errorDiv.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+        }
+
+        // Search functionality
+        function handleSearch(e) {
+            const searchText = e.target.value.toLowerCase();
+            const rows = document.querySelectorAll('#studentTableBody tr');
+            
+            rows.forEach(row => {
+                const text = row.textContent.toLowerCase();
+                row.style.display = text.includes(searchText) ? '' : 'none';
+            });
+        }
+
+        // Setup subject filtering based on selected class
+        function setupSubjectFiltering() {
+            const classSelect = document.getElementById('class');
+            const subjectSelect = document.getElementById('enrolledSubjects');
+            
+            // Return early if either element doesn't exist
+            if (!classSelect || !subjectSelect) {
+                console.log('Subject filtering not initialized: Required elements not found');
+                return;
+            }
+            
+            function filterSubjects() {
+                const selectedClass = classSelect.value;
+                
+                // Uncheck all subjects first
+                Array.from(subjectSelect.options).forEach(option => {
+                    option.selected = false;
+                });
+                
+                if (!selectedClass) {
+                    // If no class selected, disable all subjects
+                    Array.from(subjectSelect.options).forEach(option => {
+                        option.disabled = true;
+                    });
+                    return;
+                }
+                
+                // Get year and branch from selected class
+                const year = selectedClass.substring(0, 2); // FY, SY, TY
+                const branch = selectedClass.substring(2, 4); // CM, IT, ME, etc.
+                
+                // Map branch codes to full names
+                const branchMap = {
+                    'CM': 'Computer Engineering',
+                    'IT': 'Information Technology',
+                    'ME': 'Mechanical Engineering',
+                    'EJ': 'Electronics & Communication',
+                    'EE': 'Electrical Engineering',
+                    'CE': 'Civil Engineering',
+                    'AI': 'Artificial Intelligence'
+                };
+                
+                // Map year codes to full names
+                const yearMap = {
+                    'FY': 'First Year',
+                    'SY': 'Second Year',
+                    'TY': 'Third Year'
+                };
+                
+                // Filter subjects based on selected class
+                Array.from(subjectSelect.getElementsByTagName('optgroup')).forEach(group => {
+                    const label = group.label;
+                    const isYearGroup = label.includes('First Year') || label.includes('Second Year') || label.includes('Third Year');
+                    const yearMatch = isYearGroup && label.includes(yearMap[year]);
+                    const branchMatch = label.includes(branchMap[branch]);
+                    
+                    Array.from(group.children).forEach(option => {
+                        // Enable/disable options based on year and branch match
+                        option.disabled = !(yearMatch || branchMatch);
+                        
+                        // Add visual indication for disabled options
+                        if (option.disabled) {
+                            option.style.color = '#999';
+                            option.style.fontStyle = 'italic';
+                        } else {
+                            option.style.color = '';
+                            option.style.fontStyle = '';
+                        }
+                    });
+                });
+            }
+
+            // Filter subjects when class changes
+            classSelect.addEventListener('change', filterSubjects);
+            
+            // Initial filtering
+            filterSubjects();
+        }
+
+        // Handle Excel file import
+        function handleExcelImport(e) {
+            const file = e.target.files[0];
+            const reader = new FileReader();
+            const importError = document.getElementById('importError');
+            
+            if (!file) return;
+            
+            reader.onload = function(e) {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                    const jsonData = XLSX.utils.sheet_to_json(firstSheet);
+
+                    if (jsonData.length === 0) {
+                        throw new Error('No data found in the Excel file');
+                    }
+
+                    // Validate required columns
+                    const requiredColumns = ['Roll No', 'Student Name', 'Branch/Class/Year'];
+                    const headers = Object.keys(jsonData[0]);
+                    const missingColumns = requiredColumns.filter(col => !headers.includes(col));
+
+                    if (missingColumns.length > 0) {
+                        throw new Error(`Missing required columns: ${missingColumns.join(', ')}`);
+                    }
+
+                    // Process and store students
+                    const existingStudents = JSON.parse(localStorage.getItem('students')) || [];
+                    const newStudents = [];
+                    const errors = [];
+
+                    jsonData.forEach((row, index) => {
+                        try {
+                            // Validate row data
+                            if (!row['Roll No'] || !row['Student Name'] || !row['Branch/Class/Year']) {
+                                throw new Error(`Row ${index + 2}: Missing required fields`);
+                            }
+
+                            // Check if roll number already exists
+                            const rollNoExists = existingStudents.some(student => 
+                                student.rollNo === row['Roll No'] && 
+                                student.class === row['Branch/Class/Year']
+                            );
+
+                            if (rollNoExists) {
+                                throw new Error(`Row ${index + 2}: Roll number ${row['Roll No']} already exists in ${row['Branch/Class/Year']}`);
+                            }
+
+                            // Create student object
+                            const student = {
+                                rollNo: row['Roll No'].toString(),
+                                name: row['Student Name'].toString().toUpperCase(),
+                                class: row['Branch/Class/Year'],
+                                enrolledSubjects: row['Enrolled Subjects'] ? 
+                                    row['Enrolled Subjects'].split(',').map(s => s.trim()) : []
+                            };
+
+                            newStudents.push(student);
+                        } catch (err) {
+                            errors.push(err.message);
+                        }
+                    });
+
+                    if (errors.length > 0) {
+                        throw new Error('Validation errors:\n' + errors.join('\n'));
+                    }
+
+                    // Add new students to storage
+                    localStorage.setItem('students', JSON.stringify([...existingStudents, ...newStudents]));
+                    
+                    // Clear file input and refresh student list
+                    e.target.value = '';
+                    loadStudents();
+                    alert(`Successfully imported ${newStudents.length} students`);
+                    if (importError) {
+                        importError.style.display = 'none';
+                    }
+
+                } catch (err) {
+                    console.error('Import error:', err);
+                    if (importError) {
+                        importError.textContent = err.message;
+                        importError.style.display = 'block';
+                    } else {
+                        alert('Import error: ' + err.message);
+                    }
+                    e.target.value = '';
+                }
+            };
+
+            reader.readAsArrayBuffer(file);
+        }
+
+        // Generate and download Excel template
+        function generateTemplate() {
+            const template = [
+                {
+                    'Roll No': '1234',
+                    'Student Name': 'JOHN DOE',
+                    'Branch/Class/Year': 'FYCM (A)',
+                    'Enrolled Subjects': 'Mathematics,Physics,Chemistry'
+                }
+            ];
+
+            // Create workbook and worksheet
+            const wb = XLSX.utils.book_new();
+            const ws = XLSX.utils.json_to_sheet(template);
+
+            // Add column widths
+            ws['!cols'] = [
+                { wch: 10 }, // Roll No
+                { wch: 20 }, // Student Name
+                { wch: 25 }, // Branch/Class/Year
+                { wch: 40 }  // Enrolled Subjects
+            ];
+
+            // Add the worksheet to workbook
+            XLSX.utils.book_append_sheet(wb, ws, 'Students Template');
+
+            // Save the file
+            XLSX.writeFile(wb, 'student_import_template.xlsx');
+        }
+
+        function createSubjectElement(subject, isSelected = false) {
+            const div = document.createElement('div');
+            div.className = 'subject-item' + (isSelected ? ' selected' : '');
+            div.dataset.code = subject.code;
+            div.dataset.name = subject.name;
+            div.dataset.credits = subject.credits;
+            div.innerHTML = `
+                <div class="subject-info">
+                    <span class="subject-code">${subject.code}</span>
+                    <span class="subject-name">${subject.name}</span>
+                    <span class="subject-credits">${subject.credits} credits</span>
+                </div>
+                <button class="btn btn-sm ${isSelected ? 'btn-danger' : 'btn-primary'}" onclick="toggleSubjectSelection(this)">
+                    <i class="fas ${isSelected ? 'fa-times' : 'fa-plus'}"></i>
+                </button>
+            `;
+            return div;
+        }
+
+        function toggleSubjectSelection(button) {
+            const subjectItem = button.closest('.subject-item');
+            const isSelected = subjectItem.classList.toggle('selected');
+            button.className = `btn btn-sm ${isSelected ? 'btn-danger' : 'btn-primary'}`;
+            button.innerHTML = `<i class="fas ${isSelected ? 'fa-times' : 'fa-plus'}"></i>`;
+        }
+
+        function openEnrollSubjects(studentId) {
+            document.getElementById('editStudentId').value = studentId;
+            
+            // Get student's currently enrolled subjects
+            const students = JSON.parse(localStorage.getItem('students')) || [];
+            const student = students.find(s => s.id === studentId);
+            const enrolledSubjects = student?.enrolledSubjects || [];
+            
+            // Populate available subjects with selection state
+            populateAvailableSubjects(enrolledSubjects);
+            
+            openModal('enrollSubjectsModal');
+        }
+
+        function saveEnrolledSubjects() {
+            const selectedSubjects = Array.from(document.getElementById('availableSubjects').children)
+                .filter(item => item.classList.contains('selected'))
+                .map(item => ({
+                    code: item.dataset.code,
+                    name: item.dataset.name,
+                    credits: parseInt(item.dataset.credits)
+                }));
+
+            const studentId = document.getElementById('editStudentId').value;
+            const students = JSON.parse(localStorage.getItem('students')) || [];
+            const studentIndex = students.findIndex(s => s.id === studentId);
+
+            if (studentIndex !== -1) {
+                students[studentIndex].enrolledSubjects = selectedSubjects;
+                localStorage.setItem('students', JSON.stringify(students));
+                showToast('Subjects enrolled successfully');
+                closeModal('enrollSubjectsModal');
+                loadStudents(); // Refresh the student list
+            }
+        }
+
+        function populateAvailableSubjects(enrolledSubjects = []) {
+            const subjects = [
+                { code: 'MAT101', name: 'Mathematics I', credits: 4 },
+                { code: 'PHY101', name: 'Physics', credits: 3 },
+                { code: 'CHE101', name: 'Chemistry', credits: 3 },
+                { code: 'ENG101', name: 'English', credits: 2 },
+                { code: 'CSE101', name: 'Computer Science', credits: 4 }
+            ];
+            
+            const availableSubjectsDiv = document.getElementById('availableSubjects');
+            availableSubjectsDiv.innerHTML = '';
+
+            subjects.forEach(subject => {
+                const isEnrolled = enrolledSubjects.some(enrolled => enrolled.code === subject.code);
+                const subjectElement = createSubjectElement(subject, isEnrolled);
+                availableSubjectsDiv.appendChild(subjectElement);
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const form = document.getElementById('studentForm');
+            let isSubmitting = false;
+            
+            // Remove any existing event listeners
+            const newForm = form.cloneNode(true);
+            form.parentNode.replaceChild(newForm, form);
+            
+            // Add validation on form submit
+            newForm.addEventListener('submit', async function(event) {
+                event.preventDefault();
+                event.stopPropagation(); // Stop event bubbling
+                
+                if (!checkAuth()) return;
+
+                // Prevent double submission
+                if (isSubmitting) {
+                    console.log('Form submission already in progress');
+                    return;
+                }
+                
+                isSubmitting = true;
+                console.log('Starting form submission');
+
+                try {
+                    const name = document.getElementById('name').value.trim();
+                    const rollNo = document.getElementById('rollNo').value.trim();
+                    const mobile = document.getElementById('mobile').value.trim();
+                    const department = document.querySelector('input[name="department"]:checked')?.value?.trim();
+                    const classYear = document.querySelector('input[name="class"]:checked')?.value?.trim();
+                    const division = document.querySelector('input[name="division"]:checked')?.value;
+
+                    // Reset error states
+                    document.querySelectorAll('.error-text').forEach(el => el.style.display = 'none');
+                    document.querySelectorAll('.radio-group').forEach(el => el.classList.remove('error'));
+
+                    // Validate required fields
+                    const missingFields = [];
+                    if (!name) missingFields.push('Student Name');
+                    if (!rollNo) missingFields.push('Roll Number');
+                    if (!department) missingFields.push('Department');
+                    if (!classYear) missingFields.push('Class/Year');
+                    if (!mobile) missingFields.push('Mobile Number');
+                    // Division is optional, so we don't check for it
+
+                    if (missingFields.length > 0) {
+                        alert(`Please fill in all required fields:\n${missingFields.join('\n')}`);
+                        isSubmitting = false;
+                        return;
+                    }
+
+                    // Validate roll number format
+                    if (!/^\d+$/.test(rollNo)) {
+                        alert('Roll Number must contain only numbers');
+                        isSubmitting = false;
+                        return;
+                    }
+
+                    // Validate mobile number format
+                    if (!/^\d{10}$/.test(mobile)) {
+                        alert('Mobile number must be 10 digits');
+                        isSubmitting = false;
+                        return;
+                    }
+
+                    // Create student data object with proper format
+                    const studentData = {
+                        name: name,
+                        username: rollNo, // Use roll number as username
+                        password: rollNo, // Use roll number as initial password
+                        email: `${rollNo}@student.college.edu`, // Generate email from roll number
+                        mobile: mobile,
+                        rollNo: rollNo,
+                        department: [department], // Send as array
+                        classes: [classYear], // Send as array
+                        divisions: division ? [division] : [], // Division is optional
+                        role: 'student'
+                    };
+
+                    console.log('Sending student data:', studentData);
+
+                    const token = getAuthToken();
+                    if (!token) {
+                        throw new Error('Authentication token not found. Please log in again.');
+                    }
+
+                    let response = await fetch(`${API_BASE_URL}/api/admin/students`, {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${token}`,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(studentData)
+                    });
+
+                    let data = await response.json();
+
+                    // No need to retry with default division as it's now optional
+
+                    if (!response.ok) {
+                        throw new Error(data.message || 'Failed to add student');
+                    }
+
+                    // Clear form and show success message
+                    document.getElementById('studentForm').reset();
+                    alert('Student added successfully!');
+                    await loadStudents(); // Reload the student list
+
+                } catch (error) {
+                    console.error('Error adding student:', error);
+                    alert(error.message || 'Error adding student. Please try again.');
+                } finally {
+                    isSubmitting = false;
+                }
+            });
+        });
+
+        // Download Excel template function
+        function downloadTemplate() {
+            // Create template data
+            const templateData = [
+                {
+                    'Roll No': '1234',
+                    'Name': 'John Doe',
+                    'Mobile': '9876543210',
+                    'Department': 'Information Technology',
+                    'Class': 'First Year',
+                    'Division': 'A'
+                },
+                {
+                    'Roll No': '5678',
+                    'Name': 'Jane Smith',
+                    'Mobile': '9876543211',
+                    'Department': 'Computer Engineering',
+                    'Class': 'Second Year',
+                    'Division': 'B'
+                }
+            ];
+            
+            // Create workbook
+            const wb = XLSX.utils.book_new();
+            const ws = XLSX.utils.json_to_sheet(templateData);
+            
+            // Set column widths
+            ws['!cols'] = [
+                { wch: 10 }, // Roll No
+                { wch: 25 }, // Name
+                { wch: 15 }, // Mobile
+                { wch: 25 }, // Department
+                { wch: 15 }, // Class
+                { wch: 10 }  // Division
+            ];
+            
+            // Add worksheet to workbook
+            XLSX.utils.book_append_sheet(wb, ws, 'Students');
+            
+            // Generate and download file
+            XLSX.writeFile(wb, 'student_import_template.xlsx');
+        }
+
+        // Handle file selection
+        function handleFileUpload(event) {
+            const file = event.target.files[0];
+            if (file) {
+                document.getElementById('selectedFileName').textContent = file.name;
+                document.getElementById('importStudentsBtn').disabled = false;
+            } else {
+                document.getElementById('selectedFileName').textContent = 'No file selected';
+                document.getElementById('importStudentsBtn').disabled = true;
+            }
+            
+            // Hide previous results
+            document.getElementById('importResults').style.display = 'none';
+        }
+
+        // Import students from Excel file
+        async function importStudents() {
+            const fileInput = document.getElementById('excelFileInput');
+            const file = fileInput.files[0];
+            
+            if (!file) {
+                alert('Please select an Excel file first.');
+                return;
+            }
+            
+            // Show import status
+            const importStatus = document.querySelector('.import-status');
+            importStatus.style.display = 'block';
+            const progressFill = document.querySelector('.progress-fill');
+            const statusMessage = document.querySelector('.status-message');
+            
+            // Reset progress
+            progressFill.style.width = '0%';
+            statusMessage.textContent = 'Reading file...';
+            
+            try {
+                // Read file
+                const data = await readExcelFile(file);
+                
+                if (data.length === 0) {
+                    throw new Error('No data found in the Excel file');
+                }
+                
+                // Update progress
+                progressFill.style.width = '30%';
+                statusMessage.textContent = 'Validating data...';
+                
+                // Validate required columns
+                const requiredColumns = ['Roll No', 'Name', 'Department', 'Class'];
+                const headers = Object.keys(data[0]);
+                const missingColumns = requiredColumns.filter(col => !headers.includes(col));
+                
+                if (missingColumns.length > 0) {
+                    throw new Error(`Missing required columns: ${missingColumns.join(', ')}`);
+                }
+                
+                // Update progress
+                progressFill.style.width = '50%';
+                statusMessage.textContent = 'Processing students...';
+                
+                // Get auth token
+                const token = localStorage.getItem('auth_token');
+                if (!token) {
+                    throw new Error('Authentication token not found. Please log in again.');
+                }
+                
+                // Process students
+                const results = {
+                    total: data.length,
+                    success: 0,
+                    failed: 0,
+                    errors: []
+                };
+                
+                // Process each student
+                for (let i = 0; i < data.length; i++) {
+                    const row = data[i];
+                    
+                    // Update progress
+                    const progress = 50 + Math.floor((i / data.length) * 40);
+                    progressFill.style.width = `${progress}%`;
+                    statusMessage.textContent = `Processing student ${i + 1} of ${data.length}...`;
+                    
+                    try {
+                        // Validate row data
+                        if (!row['Roll No'] || !row['Name'] || !row['Department'] || !row['Class']) {
+                            throw new Error(`Missing required fields`);
+                        }
+                        
+                        // Create student data object
+                        const studentData = {
+                            name: row['Name'].trim(),
+                            username: row['Roll No'].toString().trim(),
+                            password: row['Roll No'].toString().trim(),
+                            email: `${row['Roll No'].toString().trim()}@student.college.edu`,
+                            mobile: row['Mobile'] ? row['Mobile'].toString().trim() : '',
+                            rollNo: row['Roll No'].toString().trim(),
+                            department: [row['Department'].trim()],
+                            classes: [row['Class'].trim()],
+                            divisions: row['Division'] ? [row['Division'].trim()] : [],
+                            role: 'student'
+                        };
+                        
+                        // Send API request
+                        const response = await fetch(`${API_BASE_URL}/api/admin/students`, {
+                            method: 'POST',
+                            headers: {
+                                'Authorization': `Bearer ${token}`,
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify(studentData)
+                        });
+                        
+                        const responseData = await response.json();
+                        
+                        if (!response.ok) {
+                            throw new Error(responseData.message || 'Failed to add student');
+                        }
+                        
+                        results.success++;
+                    } catch (error) {
+                        results.failed++;
+                        results.errors.push({
+                            row: i + 2, // +2 for Excel row number (1-based + header row)
+                            rollNo: row['Roll No'],
+                            name: row['Name'],
+                            error: error.message
+                        });
+                    }
+                }
+                
+                // Update progress
+                progressFill.style.width = '100%';
+                statusMessage.textContent = 'Import completed!';
+                
+                // Show results
+                displayImportResults(results);
+                
+                // Reload student list
+                await loadStudents();
+                
+            } catch (error) {
+                console.error('Import error:', error);
+                statusMessage.textContent = `Error: ${error.message}`;
+                
+                // Show error in results
+                displayImportResults({
+                    total: 0,
+                    success: 0,
+                    failed: 0,
+                    errors: [{ row: 0, error: error.message }]
+                });
+            }
+        }
+
+        // Read Excel file and return data as JSON
+        function readExcelFile(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                
+                reader.onload = function(e) {
+                    try {
+                        const data = new Uint8Array(e.target.result);
+                        const workbook = XLSX.read(data, { type: 'array' });
+                        const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                        const jsonData = XLSX.utils.sheet_to_json(firstSheet);
+                        resolve(jsonData);
+                    } catch (error) {
+                        reject(error);
+                    }
+                };
+                
+                reader.onerror = function(error) {
+                    reject(error);
+                };
+                
+                reader.readAsArrayBuffer(file);
+            });
+        }
+
+        // Display import results
+        function displayImportResults(results) {
+            const resultsDiv = document.getElementById('importResults');
+            resultsDiv.style.display = 'block';
+            
+            document.getElementById('totalRecords').textContent = results.total;
+            document.getElementById('successCount').textContent = results.success;
+            document.getElementById('failCount').textContent = results.failed;
+            
+            const errorList = document.getElementById('errorList');
+            errorList.innerHTML = '';
+            
+            if (results.errors.length > 0) {
+                results.errors.forEach(error => {
+                    const errorItem = document.createElement('div');
+                    errorItem.className = 'error-item';
+                    
+                    if (error.row > 0) {
+                        errorItem.textContent = `Row ${error.row} (${error.rollNo ? error.rollNo : ''} ${error.name ? error.name : ''}): ${error.error}`;
+                    } else {
+                        errorItem.textContent = error.error;
+                    }
+                    
+                    errorList.appendChild(errorItem);
+                });
+                errorList.style.display = 'block';
+            } else {
+                errorList.style.display = 'none';
+            }
+        }
+
+        // Delete all students function
+        function confirmDeleteAllStudents() {
+            // Create confirmation dialog
+            const dialog = document.createElement('div');
+            dialog.className = 'confirmation-dialog';
+            dialog.innerHTML = `
+                <div class="confirmation-content">
+                    <div class="confirmation-title">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        Delete All Students
+                    </div>
+                    <div class="confirmation-message">
+                        <p>You are about to delete <strong>ALL students</strong> from the system. This action cannot be undone.</p>
+                        <p>Please type <strong>DELETE</strong> below to confirm:</p>
+                        <input type="text" id="confirmText" class="form-control" style="width: 100%; padding: 8px; margin-top: 10px;">
+                    </div>
+                    <div class="confirmation-actions">
+                        <button class="btn btn-cancel" onclick="closeDeleteConfirmation()">Cancel</button>
+                        <button class="btn btn-danger" onclick="executeDeleteAllStudents()">Delete All</button>
+                    </div>
+                </div>
+            `;
+            
+            document.body.appendChild(dialog);
+            
+            // Focus on the confirmation input
+            setTimeout(() => {
+                document.getElementById('confirmText').focus();
+            }, 100);
+            
+            // Add event listener for the Enter key
+            document.getElementById('confirmText').addEventListener('keyup', function(event) {
+                if (event.key === 'Enter') {
+                    executeDeleteAllStudents();
+                }
+            });
+        }
+        
+        function closeDeleteConfirmation() {
+            const dialog = document.querySelector('.confirmation-dialog');
+            if (dialog) {
+                dialog.remove();
+            }
+        }
+        
+        async function executeDeleteAllStudents() {
+            const confirmText = document.getElementById('confirmText').value;
+            if (confirmText !== 'DELETE') {
+                alert('Please type DELETE to confirm deletion');
+                return;
+            }
+            
+            if (!checkAuth()) return;
+            
+            try {
+                const token = getAuthToken();
+                const response = await fetch(`${API_BASE_URL}/api/admin/students/delete-all`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                
+                if (!response.ok) {
+                    if (response.status === 401) {
+                        logout();
+                        return;
+                    }
+                    
+                    const errorData = await response.json();
+                    throw new Error(errorData.message || 'Failed to delete all students');
+                }
+                
+                // Close the confirmation dialog
+                closeDeleteConfirmation();
+                
+                // Show success message
+                alert('All students have been deleted successfully');
+                
+                // Reload the student list
+                await loadStudents();
+            } catch (error) {
+                console.error('Error deleting all students:', error);
+                alert('Error deleting all students: ' + error.message);
+            }
+        }
+    </script>
+</body>
+</html> 

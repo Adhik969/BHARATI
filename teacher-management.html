@@ -1,0 +1,1706 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teacher Management - BVIT Attendance</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.1/css/all.min.css">
+    <!-- Load jQuery first -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    
+    <!-- Then load Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.1/dist/umd/popper.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.0/dist/js/bootstrap.min.js"></script>
+    
+    <!-- Load common.js with updated path -->
+    <script src="/BHARATI/assets/js/common.js"></script>
+    <!-- Fallback script in case the above fails -->
+    <script>
+        // Check if common.js failed to load
+        window.addEventListener('error', function(e) {
+            if (e.target.tagName === 'SCRIPT' && e.target.src.includes('common.js')) {
+                console.log('Attempting to load common.js from alternate path');
+                // Try loading from different paths
+                const alternativePaths = [
+                    './assets/js/common.js',
+                    '../assets/js/common.js',
+                    '/assets/js/common.js'
+                ];
+                
+                // Try each path
+                for (const path of alternativePaths) {
+                    const script = document.createElement('script');
+                    script.src = path;
+                    document.head.appendChild(script);
+                    console.log('Trying to load from:', path);
+                }
+            }
+        }, true);
+    </script>
+    
+    <!-- Fix all click events -->
+    <script>
+        // Wait for DOM to be fully loaded
+        window.addEventListener('load', function() {
+            console.log('Window fully loaded - fixing all click events');
+            
+            // Fix logout button
+            const logoutBtn = document.getElementById('logoutBtn');
+            if (logoutBtn) {
+                logoutBtn.onclick = function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    console.log('Logout button clicked');
+                    localStorage.clear();
+                    window.location.href = '/login.html';
+                    return false;
+                };
+                console.log('Logout button fixed');
+            }
+            
+            // Fix navigation links
+            document.querySelectorAll('.navbar a').forEach(link => {
+                const href = link.getAttribute('href');
+                if (href) {
+                    link.onclick = function(e) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        console.log('Navigation link clicked:', href);
+                        window.location.href = href;
+                        return false;
+                    };
+                }
+            });
+            console.log('Navigation links fixed');
+            
+            // Fix edit buttons
+            document.querySelectorAll('.btn-primary.edit-btn, button.edit-btn, .edit-btn, [data-action="edit"]').forEach(btn => {
+                btn.onclick = function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    console.log('Edit button clicked');
+                    const teacherId = this.getAttribute('data-id') || this.closest('tr').getAttribute('data-id');
+                    if (teacherId) {
+                        console.log('Editing teacher with ID:', teacherId);
+                        editTeacher(teacherId);
+                    } else {
+                        console.error('No teacher ID found for edit button');
+                    }
+                    return false;
+                };
+            });
+            console.log('Edit buttons fixed');
+            
+            // Fix delete buttons
+            document.querySelectorAll('.btn-danger.delete-btn, button.delete-btn, .delete-btn, [data-action="delete"]').forEach(btn => {
+                btn.onclick = function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    console.log('Delete button clicked');
+                    const teacherId = this.getAttribute('data-id') || this.closest('tr').getAttribute('data-id');
+                    if (teacherId && confirm('Are you sure you want to delete this teacher?')) {
+                        console.log('Deleting teacher with ID:', teacherId);
+                        deleteTeacher(teacherId);
+                    }
+                    return false;
+                };
+            });
+            console.log('Delete buttons fixed');
+            
+            // Fix modal buttons
+            document.querySelectorAll('#editTeacherModal .btn, #editTeacherModal button').forEach(btn => {
+                const action = btn.getAttribute('data-action') || btn.id;
+                btn.onclick = function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    console.log('Modal button clicked:', action);
+                    
+                    if (action === 'saveEditChangesBtn' || btn.id === 'saveEditChangesBtn') {
+                        console.log('Save changes button clicked');
+                        document.getElementById('editTeacherForm').dispatchEvent(new Event('submit', {
+                            bubbles: true,
+                            cancelable: true
+                        }));
+                    } else if (btn.getAttribute('data-dismiss') === 'modal' || btn.classList.contains('close')) {
+                        console.log('Close modal button clicked');
+                        try {
+                            $('#editTeacherModal').modal('hide');
+                        } catch (error) {
+                            console.error('Error hiding modal with jQuery:', error);
+                            manuallyToggleModal('#editTeacherModal', false);
+                        }
+                    }
+                    return false;
+                };
+            });
+            console.log('Modal buttons fixed');
+            
+            // Fix form submissions
+            document.getElementById('addTeacherForm').onsubmit = function(e) {
+                console.log('Add teacher form submitted');
+                handleSubmit(e);
+                return false;
+            };
+            
+            document.getElementById('editTeacherForm').onsubmit = function(e) {
+                console.log('Edit teacher form submitted');
+                handleEditSubmit(e);
+                return false;
+            };
+            console.log('Form submissions fixed');
+            
+            // Fix department, class, and division selects
+            document.getElementById('department').onchange = handleDepartmentChange;
+            document.getElementById('classes').onchange = handleClassChange;
+            document.getElementById('division').onchange = handleDivisionChange;
+            document.getElementById('editDepartment').onchange = handleEditDepartmentChange;
+            document.getElementById('editClasses').onchange = handleEditClassChange;
+            document.getElementById('editDivision').onchange = handleEditDivisionChange;
+            console.log('Select elements fixed');
+            
+            console.log('All click events fixed');
+        });
+    </script>
+    <style>
+        .form-section {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        .selected-item, .tag {
+            display: inline-block;
+            background: #e9ecef;
+            padding: 5px 10px;
+            margin: 5px;
+            border-radius: 15px;
+        }
+        .selected-item button, .tag i {
+            background: none;
+            border: none;
+            color: #dc3545;
+            margin-left: 5px;
+            cursor: pointer;
+        }
+        #loadingOverlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.8);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        .selected-classes, .selected-divisions {
+            margin-top: 10px;
+        }
+        .selected-departments, .selected-classes, .selected-divisions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 8px;
+        }
+
+        .tag {
+            background-color: #e9ecef;
+            padding: 5px 10px;
+            border-radius: 15px;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 14px;
+        }
+
+        .tag i {
+            cursor: pointer;
+            color: #dc3545;
+        }
+        
+        /* Modal styles */
+        .modal-dialog {
+            max-width: 700px;
+            margin: 1.75rem auto;
+            display: flex;
+            align-items: center; /* Center vertically */
+            min-height: calc(100% - 3.5rem);
+        }
+        
+        .modal-content {
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+            background-color: #fff;
+            border: 1px solid rgba(0, 0, 0, 0.2);
+            border-radius: 0.3rem;
+            outline: 0;
+        }
+        
+        .modal-body {
+            position: relative;
+            flex: 1 1 auto;
+            padding: 1rem;
+            max-height: 80vh; /* Limit height but allow scrolling */
+            overflow-y: auto; /* Enable vertical scrolling */
+            -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
+            scrollbar-width: thin; /* For Firefox */
+        }
+        
+        .modal-body::-webkit-scrollbar {
+            width: 8px; /* Width of scrollbar */
+        }
+        
+        .modal-body::-webkit-scrollbar-thumb {
+            background-color: #888; /* Color of scrollbar handle */
+            border-radius: 4px;
+        }
+        
+        .modal-body::-webkit-scrollbar-track {
+            background-color: #f1f1f1; /* Color of scrollbar track */
+        }
+        
+        .modal-footer {
+            border-top: 1px solid #dee2e6;
+            padding: 15px;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: flex-end;
+        }
+        
+        /* Ensure the modal appears on top */
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            z-index: 9999; /* Increased z-index to ensure it's on top */
+            width: 100%;
+            height: 100%;
+            overflow: visible;
+            outline: 0;
+            display: none;
+        }
+
+        .modal.show {
+            display: block;
+        }
+
+        .modal-backdrop {
+            position: fixed;
+            top: 0;
+            left: 0;
+            z-index: 9990; /* Increased z-index but still below modal */
+            width: 100vw;
+            height: 100vh;
+            background-color: #000;
+        }
+
+        .modal-backdrop.fade {
+            opacity: 0;
+        }
+
+        .modal-backdrop.show {
+            opacity: 0.5;
+        }
+
+        body.modal-open {
+            overflow: hidden;
+            padding-right: 17px; /* Scrollbar width */
+        }
+
+        /* Mobile responsiveness */
+        @media (max-width: 768px) {
+            .container {
+                padding: 10px;
+            }
+            
+            .card {
+                margin-bottom: 15px;
+            }
+            
+            .card-body {
+                padding: 15px;
+            }
+            
+            /* Improve form display on mobile */
+            .form-row {
+                flex-direction: column;
+            }
+            
+            .form-group {
+                margin-bottom: 15px;
+            }
+            
+            /* Make tables more responsive */
+            .table-responsive {
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+            }
+            
+            /* Adjust buttons for touch */
+            .btn {
+                padding: 8px 12px;
+                font-size: 14px;
+                margin-bottom: 5px;
+            }
+            
+            /* Better spacing in modals */
+            .modal-body {
+                padding: 15px;
+            }
+            
+            /* Enhance tag display */
+            .tag {
+                margin-bottom: 5px;
+            }
+        }
+        
+        @media (max-width: 576px) {
+            /* Further adjustments for very small screens */
+            .navbar-brand {
+                font-size: 18px;
+            }
+            
+            h3 {
+                font-size: 20px;
+                margin-bottom: 15px;
+            }
+            
+            .table th, .table td {
+                padding: 0.5rem;
+                font-size: 14px;
+            }
+            
+            /* Stack action buttons vertically */
+            .btn-group {
+                flex-direction: column;
+            }
+        }
+
+        /* Form field styles */
+        .form-control {
+            display: block;
+            width: 100%;
+            height: calc(1.5em + 0.75rem + 2px);
+            padding: 0.375rem 0.75rem;
+            font-size: 1rem;
+            font-weight: 400;
+            line-height: 1.5;
+            color: #495057;
+            background-color: #fff;
+            background-clip: padding-box;
+            border: 1px solid #ced4da;
+            border-radius: 0.25rem;
+            transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+        }
+
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        /* Modal scrolling fix */
+        #editFormContainer {
+            padding-right: 5px; /* Add padding to prevent content from touching the scrollbar */
+        }
+
+        /* Ensure form labels are visible */
+        label {
+            display: inline-block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+        }
+
+        /* Make sure the modal is properly positioned */
+        @media (min-width: 576px) {
+            .modal-dialog {
+                max-width: 700px;
+                margin: 1.75rem auto;
+            }
+        }
+
+        /* Fix for mobile devices */
+        @media (max-width: 575.98px) {
+            .modal-dialog {
+                margin: 0.5rem;
+                max-width: calc(100% - 1rem);
+            }
+            
+            .modal-body {
+                max-height: 60vh;
+            }
+        }
+        
+        /* Modal display fixes */
+        .modal.show {
+            display: block;
+        }
+        
+        .modal-open {
+            overflow: hidden;
+        }
+        
+        /* Make sure form is fully visible */
+        #editTeacherForm {
+            display: block;
+            width: 100%;
+        }
+        
+        /* Fix modal display issues */
+        #editTeacherModal {
+            z-index: 1050;
+        }
+        
+        .modal-backdrop {
+            z-index: 1040;
+        }
+        
+        /* Ensure form fields are visible */
+        .form-group {
+            margin-bottom: 1.5rem;
+            display: block;
+            width: 100%;
+        }
+        
+        /* Custom navbar styles for better mobile responsiveness */
+        @media (max-width: 768px) {
+            .navbar .container {
+                flex-direction: column;
+                align-items: center;
+                padding: 10px;
+            }
+            
+            .navbar .d-flex {
+                flex-wrap: wrap;
+                justify-content: center;
+                margin-top: 10px;
+            }
+            
+            .navbar .btn {
+                margin: 5px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="loadingOverlay">
+        <div class="spinner-border text-primary" role="status">
+            <span class="sr-only">Loading...</span>
+        </div>
+    </div>
+
+    <!-- Simple navigation bar with direct links -->
+    <nav class="navbar navbar-dark bg-dark">
+        <div class="container">
+            <a class="navbar-brand" href="admin-dashboard.html">BVIT Attendance</a>
+            <div class="d-flex">
+                <a class="btn btn-outline-light mx-2" href="admin-dashboard.html">Dashboard</a>
+                <a class="btn btn-primary mx-2" href="teacher-management.html">Teachers</a>
+                <a class="btn btn-outline-light mx-2" href="student-management.html">Students</a>
+                <button class="btn btn-danger mx-2" id="logoutBtn">Logout</button>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <h2>Teacher Management</h2>
+        
+        <div class="form-section">
+            <h4>Add New Teacher</h4>
+            <form id="addTeacherForm" onsubmit="handleSubmit(event)">
+                <div class="form-row">
+                    <div class="form-group col-md-6">
+                        <label for="username">Username*</label>
+                        <input type="text" class="form-control" id="username" required>
+                    </div>
+                    <div class="form-group col-md-6">
+                        <label for="password">Password*</label>
+                        <input type="password" class="form-control" id="password" required>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group col-md-6">
+                        <label for="name">Full Name*</label>
+                        <input type="text" class="form-control" id="name" required>
+                    </div>
+                    <div class="form-group col-md-6">
+                        <label for="email">Email*</label>
+                        <input type="email" class="form-control" id="email" required>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group col-md-6">
+                        <label for="mobile">Mobile Number*</label>
+                        <input type="tel" class="form-control" id="mobile" pattern="[0-9]{10}" required>
+                    </div>
+                    <div class="form-group col-md-6">
+                        <label for="designation">Designation*</label>
+                        <select class="form-control" id="designation" required>
+                            <option value="">Select Designation</option>
+                            <option value="HOD">HOD</option>
+                            <option value="LECTURE">LECTURE</option>
+                            <option value="LAB ASSISTANT">LAB ASSISTANT</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="department">Department*</label>
+                    <select class="form-control" id="department" onchange="handleDepartmentChange()">
+                        <option value="">Select Department</option>
+                        <option value="Computer Engineering">Computer Engineering</option>
+                        <option value="Information Technology">Information Technology</option>
+                        <option value="Mechanical Engineering">Mechanical Engineering</option>
+                        <option value="Electronics & Communication">Electronics & Communication</option>
+                        <option value="Electrical Engineering">Electrical Engineering</option>
+                        <option value="Civil Engineering">Civil Engineering</option>
+                        <option value="Artificial Intelligence">Artificial Intelligence</option>
+                    </select>
+                    <div id="selectedDepartments" class="selected-departments mt-2"></div>
+                    <small class="form-text text-muted">Click on the department to add it. You can add multiple departments.</small>
+                </div>
+
+                <div class="form-group">
+                    <label for="classes">Class*</label>
+                    <select class="form-control" id="classes" onchange="handleClassChange()">
+                        <option value="">Select Class</option>
+                        <option value="First Year">First Year</option>
+                        <option value="Second Year">Second Year</option>
+                        <option value="Third Year">Third Year</option>
+                        <option value="Fourth Year">Fourth Year</option>
+                    </select>
+                    <div id="selectedClasses" class="selected-classes"></div>
+                    <small class="form-text text-muted">Click on the class to add it. You can add multiple classes.</small>
+                </div>
+
+                <div class="form-group">
+                    <label for="division">Division (Optional)</label>
+                    <select class="form-control" id="division" onchange="handleDivisionChange()">
+                        <option value="">Select Division</option>
+                        <option value="A">A</option>
+                        <option value="B">B</option>
+                        <option value="C">C</option>
+                    </select>
+                    <div id="selectedDivisions" class="selected-divisions"></div>
+                    <small class="form-text text-muted">Optional: Select divisions if you want to restrict the teacher to specific divisions</small>
+                </div>
+
+                <div class="alert alert-info">
+                    <strong>How Student Assignment Works:</strong>
+                    <p>Students are automatically assigned to teachers based on matching departments, classes, and divisions:</p>
+                    <ul>
+                        <li>Teachers will see all students that match their assigned departments AND classes</li>
+                        <li>If divisions are specified for a teacher, they will only see students in those divisions</li>
+                        <li>If no divisions are specified, teachers will see students in all divisions</li>
+                    </ul>
+                    <p>To assign specific students to a teacher, ensure their department, class, and division settings match.</p>
+                </div>
+
+                <button type="submit" class="btn btn-primary">Add Teacher</button>
+            </form>
+
+            <div class="mt-5">
+                <h3>Teachers List</h3>
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Email</th>
+                                <th>Mobile</th>
+                                <th>Designation</th>
+                                <th>Department</th>
+                                <th>Classes</th>
+                                <th>Divisions</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="teacherTableBody">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Teacher Modal -->
+    <div class="modal fade" id="editTeacherModal" tabindex="-1" role="dialog" aria-labelledby="editTeacherModalLabel">
+        <div class="modal-dialog modal-lg" role="document">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title" id="editTeacherModalLabel">Edit Teacher</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div id="editFormContainer">
+                        <form id="editTeacherForm">
+                        <input type="hidden" id="editTeacherId">
+                        <div class="form-row">
+                            <div class="form-group col-md-6">
+                                <label for="editName">Full Name*</label>
+                                <input type="text" class="form-control" id="editName" required>
+                            </div>
+                            <div class="form-group col-md-6">
+                                <label for="editEmail">Email*</label>
+                                <input type="email" class="form-control" id="editEmail" required>
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group col-md-6">
+                                <label for="editMobile">Mobile Number*</label>
+                                <input type="tel" class="form-control" id="editMobile" pattern="[0-9]{10}" required>
+                            </div>
+                            <div class="form-group col-md-6">
+                                <label for="editDesignation">Designation*</label>
+                                <select class="form-control" id="editDesignation" required>
+                                    <option value="">Select Designation</option>
+                                    <option value="HOD">HOD</option>
+                                    <option value="LECTURE">LECTURE</option>
+                                    <option value="LAB ASSISTANT">LAB ASSISTANT</option>
+                                        <option value="Teacher">Teacher</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="editDepartment">Department*</label>
+                            <select class="form-control" id="editDepartment" onchange="handleEditDepartmentChange()">
+                                <option value="">Select Department</option>
+                                <option value="Computer Engineering">Computer Engineering</option>
+                                <option value="Information Technology">Information Technology</option>
+                                <option value="Mechanical Engineering">Mechanical Engineering</option>
+                                <option value="Electronics & Communication">Electronics & Communication</option>
+                                <option value="Electrical Engineering">Electrical Engineering</option>
+                                <option value="Civil Engineering">Civil Engineering</option>
+                                <option value="Artificial Intelligence">Artificial Intelligence</option>
+                            </select>
+                            <div id="editSelectedDepartments" class="selected-departments mt-2"></div>
+                            <small class="form-text text-muted">Click on the department to add it. You can add multiple departments.</small>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="editClasses">Class*</label>
+                            <select class="form-control" id="editClasses" onchange="handleEditClassChange()">
+                                <option value="">Select Class</option>
+                                <option value="First Year">First Year</option>
+                                <option value="Second Year">Second Year</option>
+                                <option value="Third Year">Third Year</option>
+                                <option value="Fourth Year">Fourth Year</option>
+                            </select>
+                            <div id="editSelectedClasses" class="selected-classes mt-2"></div>
+                            <small class="form-text text-muted">Click on the class to add it. You can add multiple classes.</small>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="editDivision">Division (Optional)</label>
+                            <select class="form-control" id="editDivision" onchange="handleEditDivisionChange()">
+                                <option value="">Select Division</option>
+                                <option value="A">A</option>
+                                <option value="B">B</option>
+                                <option value="C">C</option>
+                            </select>
+                            <div id="editSelectedDivisions" class="selected-divisions mt-2"></div>
+                            <small class="form-text text-muted">Optional: Select divisions if you want to restrict the teacher to specific divisions</small>
+                        </div>
+                    </form>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" id="saveEditChangesBtn">Save Changes</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global state for selected items
+        const state = {
+            departments: new Set(),
+            classes: new Set(),
+            divisions: new Set(),
+            editDepartments: new Set(),
+            editClasses: new Set(),
+            editDivisions: new Set()
+        };
+
+        // Function to check if modal is properly loaded in the DOM
+        function checkModalInDOM() {
+            const modalElement = document.getElementById('editTeacherModal');
+            console.log('Modal element in DOM:', modalElement ? true : false);
+            
+            if (!modalElement) {
+                console.error('Modal not found in DOM!');
+                return false;
+            }
+            
+            // Check if all required elements exist
+            const modalDialog = modalElement.querySelector('.modal-dialog');
+            const modalContent = modalElement.querySelector('.modal-content');
+            const modalHeader = modalElement.querySelector('.modal-header');
+            const modalBody = modalElement.querySelector('.modal-body');
+            const modalFooter = modalElement.querySelector('.modal-footer');
+            const editForm = modalElement.querySelector('#editTeacherForm');
+            
+            console.log('Modal structure check:');
+            console.log('- Dialog:', modalDialog ? 'Found' : 'Missing');
+            console.log('- Content:', modalContent ? 'Found' : 'Missing');
+            console.log('- Header:', modalHeader ? 'Found' : 'Missing');
+            console.log('- Body:', modalBody ? 'Found' : 'Missing');
+            console.log('- Footer:', modalFooter ? 'Found' : 'Missing');
+            console.log('- Edit Form:', editForm ? 'Found' : 'Missing');
+            
+            return modalDialog && modalContent && modalHeader && modalBody && modalFooter && editForm;
+        }
+
+        // Add this to the DOMContentLoaded event
+        document.addEventListener('DOMContentLoaded', async function() {
+            const token = localStorage.getItem('auth_token');
+            const userRole = localStorage.getItem('user_role');
+            
+            if (!token || userRole !== 'admin') {
+                window.location.href = '/login.html';
+                return;
+            }
+            
+            // Navigation is now using direct links with no toggle
+
+            // Check if modal is properly loaded
+            console.log('Checking if modal is properly loaded in DOM:');
+            const modalLoaded = checkModalInDOM();
+            console.log('Modal properly loaded:', modalLoaded);
+
+            // Initialize Bootstrap modals with proper z-index
+            $('#editTeacherModal').modal({
+                backdrop: 'static',
+                keyboard: false,
+                show: false
+            });
+            
+            // Force proper z-index for modal elements
+            $('#editTeacherModal').css('z-index', '9999');
+            $('#editTeacherModal .modal-dialog').css('z-index', '10000');
+            $('#editTeacherModal .modal-content').css('z-index', '10001');
+            $('#editTeacherModal .modal-body').css('overflow', 'visible');
+            
+            console.log('Modal initialized');
+            
+            // Add event listener for modal shown event to ensure form visibility
+            $('#editTeacherModal').on('shown.bs.modal', function () {
+                console.log('Modal shown event triggered - ensuring form visibility');
+                
+                // Make sure the modal is fully visible
+                const modal = document.querySelector('#editTeacherModal');
+                if (modal) {
+                    modal.style.display = 'block';
+                    modal.style.height = 'auto';
+                    modal.style.overflow = 'visible';
+                }
+                
+                // Make sure the form is fully visible
+                const editForm = document.querySelector('#editTeacherForm');
+                if (editForm) {
+                    editForm.style.display = 'block';
+                    editForm.style.visibility = 'visible';
+                    editForm.style.height = 'auto';
+                }
+                
+                // Force recalculation of layout
+                setTimeout(function() {
+                    ensureModalScrollable();
+                    
+                    // Double check form visibility
+                    const formCheck = document.querySelector('#editTeacherForm');
+                    if (formCheck) {
+                        console.log('Form visibility check:', 
+                            window.getComputedStyle(formCheck).display,
+                            window.getComputedStyle(formCheck).visibility);
+                    }
+                }, 100);
+            });
+            
+            // Add event listener to the save changes button
+            document.getElementById('saveEditChangesBtn').addEventListener('click', function() {
+                console.log('Save changes button clicked');
+                const editForm = document.getElementById('editTeacherForm');
+                // Create a submit event and dispatch it
+                const submitEvent = new Event('submit', {
+                    bubbles: true,
+                    cancelable: true
+                });
+                editForm.dispatchEvent(submitEvent);
+            });
+            
+            // Add direct event listener to the edit form
+            const editForm = document.getElementById('editTeacherForm');
+            if (editForm) {
+                editForm.addEventListener('submit', function(event) {
+                    console.log('Edit form submit event captured');
+                    handleEditSubmit(event);
+                });
+                console.log('Edit form event listener added');
+            } else {
+                console.error('Edit form not found in the DOM');
+            }
+
+            loadTeachers();
+        });
+
+        function handleDepartmentChange() {
+            const departmentSelect = document.getElementById('department');
+            const selectedDepartment = departmentSelect.value;
+            
+            if (selectedDepartment && !state.departments.has(selectedDepartment)) {
+                state.departments.add(selectedDepartment);
+                updateSelectedDepartments();
+            }
+            
+            departmentSelect.value = '';
+        }
+
+        function handleClassChange() {
+            const classSelect = document.getElementById('classes');
+            const selectedClass = classSelect.value;
+            
+            if (selectedClass && !state.classes.has(selectedClass)) {
+                state.classes.add(selectedClass);
+                updateSelectedClasses();
+            }
+            
+            classSelect.value = '';
+        }
+
+        function handleDivisionChange() {
+            const divisionSelect = document.getElementById('division');
+            const selectedDivision = divisionSelect.value;
+            
+            if (selectedDivision && !state.divisions.has(selectedDivision)) {
+                state.divisions.add(selectedDivision);
+                updateSelectedDivisions();
+            }
+            
+            divisionSelect.value = '';
+        }
+
+        function updateSelectedDepartments() {
+            const container = document.getElementById('selectedDepartments');
+            container.innerHTML = '';
+            
+            state.departments.forEach(dept => {
+                const item = createSelectedItem(dept, () => {
+                    state.departments.delete(dept);
+                    updateSelectedDepartments();
+                });
+                container.appendChild(item);
+            });
+        }
+
+        function updateSelectedClasses() {
+            const container = document.getElementById('selectedClasses');
+            container.innerHTML = '';
+            
+            state.classes.forEach(cls => {
+                const item = createSelectedItem(cls, () => {
+                    state.classes.delete(cls);
+                    updateSelectedClasses();
+                });
+                container.appendChild(item);
+            });
+        }
+
+        function updateSelectedDivisions() {
+            const container = document.getElementById('selectedDivisions');
+            container.innerHTML = '';
+            
+            state.divisions.forEach(div => {
+                const item = createSelectedItem(div, () => {
+                    state.divisions.delete(div);
+                    updateSelectedDivisions();
+                });
+                container.appendChild(item);
+            });
+        }
+
+        function createSelectedItem(text, onRemove) {
+            const div = document.createElement('div');
+            div.className = 'tag';
+            div.innerHTML = `
+                ${text}
+                <i class="fas fa-times"></i>
+            `;
+            div.querySelector('i').addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                onRemove();
+            });
+            return div;
+        }
+
+        async function handleSubmit(event) {
+            event.preventDefault();
+            
+            // Clear any existing error messages
+            const existingAlerts = document.querySelectorAll('.alert');
+            existingAlerts.forEach(alert => alert.remove());
+            
+            let hasError = false;
+            
+            if (state.departments.size === 0) {
+                showError('Please select at least one department');
+                document.getElementById('department').focus();
+                hasError = true;
+            }
+            
+            if (state.classes.size === 0) {
+                showError('Please select at least one class');
+                if (!hasError) {
+                    document.getElementById('classes').focus();
+                }
+                hasError = true;
+            }
+
+            if (hasError) {
+                return;
+            }
+
+            const formData = {
+                username: document.getElementById('username').value,
+                password: document.getElementById('password').value,
+                name: document.getElementById('name').value,
+                email: document.getElementById('email').value,
+                mobile: document.getElementById('mobile').value,
+                designation: document.getElementById('designation').value,
+                department: Array.from(state.departments),
+                classes: Array.from(state.classes),
+                divisions: Array.from(state.divisions),
+                role: 'teacher'
+            };
+
+            const loadingOverlay = document.getElementById('loadingOverlay');
+            loadingOverlay.style.display = 'flex';
+
+            try {
+                const token = localStorage.getItem('auth_token');
+                const response = await fetch('/api/admin/teachers', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify(formData)
+                });
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.message || 'Failed to add teacher');
+                }
+
+                showSuccess('Teacher added successfully');
+                resetForm();
+                loadTeachers();
+            } catch (error) {
+                console.error('Error adding teacher:', error);
+                showError(error.message || 'Failed to add teacher');
+            } finally {
+                loadingOverlay.style.display = 'none';
+            }
+        }
+
+        function resetForm() {
+            document.getElementById('addTeacherForm').reset();
+            state.departments.clear();
+            state.classes.clear();
+            state.divisions.clear();
+            updateSelectedDepartments();
+            updateSelectedClasses();
+            updateSelectedDivisions();
+        }
+
+        async function loadTeachers() {
+            const loadingOverlay = document.getElementById('loadingOverlay');
+            loadingOverlay.style.display = 'flex';
+
+            try {
+                const token = localStorage.getItem('auth_token');
+                const response = await fetch('/api/admin/teachers', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to load teachers');
+                }
+
+                const teachers = await response.json();
+                displayTeachers(teachers);
+            } catch (error) {
+                console.error('Error loading teachers:', error);
+                showError('Failed to load teachers');
+            } finally {
+                loadingOverlay.style.display = 'none';
+            }
+        }
+
+        function displayTeachers(teachers) {
+            const tbody = document.getElementById('teacherTableBody');
+            tbody.innerHTML = '';
+
+            teachers.forEach(teacher => {
+                const tr = document.createElement('tr');
+                // Add data-id attribute to the row for easier reference
+                tr.setAttribute('data-id', teacher._id);
+                
+                // Create table cells for teacher data
+                const nameTd = document.createElement('td');
+                nameTd.textContent = teacher.name;
+                
+                const emailTd = document.createElement('td');
+                emailTd.textContent = teacher.email;
+                
+                const mobileTd = document.createElement('td');
+                mobileTd.textContent = teacher.mobile;
+                
+                const designationTd = document.createElement('td');
+                designationTd.textContent = teacher.designation;
+                
+                const departmentTd = document.createElement('td');
+                departmentTd.textContent = Array.isArray(teacher.department) ? teacher.department.join(', ') : teacher.department || '-';
+                
+                const classesTd = document.createElement('td');
+                classesTd.textContent = Array.isArray(teacher.classes) ? teacher.classes.join(', ') : teacher.classes || '-';
+                
+                const divisionsTd = document.createElement('td');
+                divisionsTd.textContent = Array.isArray(teacher.divisions) ? teacher.divisions.join(', ') : teacher.divisions || '-';
+                
+                // Create action buttons
+                const actionsTd = document.createElement('td');
+                
+                const editButton = document.createElement('button');
+                editButton.className = 'btn btn-sm btn-primary mr-1 edit-btn';
+                editButton.textContent = 'Edit';
+                editButton.setAttribute('data-id', teacher._id);
+                editButton.setAttribute('data-action', 'edit');
+                editButton.setAttribute('type', 'button');
+                // We'll handle clicks in our global event handler
+                
+                const deleteButton = document.createElement('button');
+                deleteButton.className = 'btn btn-sm btn-danger delete-btn';
+                deleteButton.textContent = 'Delete';
+                deleteButton.setAttribute('data-id', teacher._id);
+                deleteButton.setAttribute('data-action', 'delete');
+                deleteButton.setAttribute('type', 'button');
+                // We'll handle clicks in our global event handler
+                
+                actionsTd.appendChild(editButton);
+                actionsTd.appendChild(deleteButton);
+                
+                // Append all cells to the row
+                tr.appendChild(nameTd);
+                tr.appendChild(emailTd);
+                tr.appendChild(mobileTd);
+                tr.appendChild(designationTd);
+                tr.appendChild(departmentTd);
+                tr.appendChild(classesTd);
+                tr.appendChild(divisionsTd);
+                tr.appendChild(actionsTd);
+                
+                tbody.appendChild(tr);
+            });
+            
+            // After displaying teachers, refresh the click handlers
+            setTimeout(() => {
+                console.log('Refreshing click handlers after loading teachers');
+                // Fix edit buttons
+                document.querySelectorAll('.edit-btn').forEach(btn => {
+                    btn.onclick = function(e) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        console.log('Edit button clicked');
+                        const teacherId = this.getAttribute('data-id') || this.closest('tr').getAttribute('data-id');
+                        if (teacherId) {
+                            console.log('Editing teacher with ID:', teacherId);
+                            editTeacher(teacherId);
+                        } else {
+                            console.error('No teacher ID found for edit button');
+                        }
+                        return false;
+                    };
+                });
+                
+                // Fix delete buttons
+                document.querySelectorAll('.delete-btn').forEach(btn => {
+                    btn.onclick = function(e) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        console.log('Delete button clicked');
+                        const teacherId = this.getAttribute('data-id') || this.closest('tr').getAttribute('data-id');
+                        if (teacherId && confirm('Are you sure you want to delete this teacher?')) {
+                            console.log('Deleting teacher with ID:', teacherId);
+                            deleteTeacher(teacherId);
+                        }
+                        return false;
+                    };
+                });
+                console.log('Click handlers refreshed');
+            }, 100);
+        }
+
+        async function deleteTeacher(teacherId) {
+            if (!confirm('Are you sure you want to delete this teacher?')) {
+                return;
+            }
+
+            const loadingOverlay = document.getElementById('loadingOverlay');
+            loadingOverlay.style.display = 'flex';
+
+            try {
+                const token = localStorage.getItem('auth_token');
+                const response = await fetch(`/api/admin/teachers/${teacherId}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to delete teacher');
+                }
+
+                showSuccess('Teacher deleted successfully');
+                loadTeachers();
+            } catch (error) {
+                console.error('Error deleting teacher:', error);
+                showError('Failed to delete teacher');
+            } finally {
+                loadingOverlay.style.display = 'none';
+            }
+        }
+
+        function showError(message) {
+            const errorDiv = document.createElement('div');
+            errorDiv.className = 'alert alert-danger alert-dismissible fade show';
+            errorDiv.innerHTML = `
+                ${message}
+                <button type="button" class="close" data-dismiss="alert">&times;</button>
+            `;
+            
+            const container = document.querySelector('.container');
+            container.insertBefore(errorDiv, container.firstChild);
+
+            setTimeout(() => {
+                errorDiv.remove();
+            }, 5000);
+        }
+
+        function showSuccess(message) {
+            const successDiv = document.createElement('div');
+            successDiv.className = 'alert alert-success alert-dismissible fade show';
+            successDiv.innerHTML = `
+                ${message}
+                <button type="button" class="close" data-dismiss="alert">&times;</button>
+            `;
+            
+            const container = document.querySelector('.container');
+            container.insertBefore(successDiv, container.firstChild);
+
+            setTimeout(() => {
+                successDiv.remove();
+            }, 5000);
+        }
+
+        function handleLogout() {
+            localStorage.clear();
+            window.location.href = '/login.html';
+        }
+
+        // Edit teacher functions
+        function handleEditDepartmentChange() {
+            const departmentSelect = document.getElementById('editDepartment');
+            const selectedDepartment = departmentSelect.value;
+            
+            if (selectedDepartment && !state.editDepartments.has(selectedDepartment)) {
+                state.editDepartments.add(selectedDepartment);
+                updateEditSelectedDepartments();
+                console.log('Added department to edit form:', selectedDepartment);
+                console.log('Current edit departments:', Array.from(state.editDepartments));
+            }
+            
+            departmentSelect.value = '';
+        }
+
+        function handleEditClassChange() {
+            const classSelect = document.getElementById('editClasses');
+            const selectedClass = classSelect.value;
+            
+            if (selectedClass && !state.editClasses.has(selectedClass)) {
+                state.editClasses.add(selectedClass);
+                updateEditSelectedClasses();
+            }
+            
+            classSelect.value = '';
+        }
+
+        function handleEditDivisionChange() {
+            const divisionSelect = document.getElementById('editDivision');
+            const selectedDivision = divisionSelect.value;
+            
+            if (selectedDivision && !state.editDivisions.has(selectedDivision)) {
+                state.editDivisions.add(selectedDivision);
+                updateEditSelectedDivisions();
+            }
+            
+            divisionSelect.value = '';
+        }
+
+        function updateEditSelectedDepartments() {
+            const container = document.getElementById('editSelectedDepartments');
+            container.innerHTML = '';
+            
+            state.editDepartments.forEach(dept => {
+                const item = createSelectedItem(dept, () => {
+                    state.editDepartments.delete(dept);
+                    updateEditSelectedDepartments();
+                });
+                container.appendChild(item);
+            });
+        }
+
+        function updateEditSelectedClasses() {
+            const container = document.getElementById('editSelectedClasses');
+            container.innerHTML = '';
+            
+            state.editClasses.forEach(cls => {
+                const item = createSelectedItem(cls, () => {
+                    state.editClasses.delete(cls);
+                    updateEditSelectedClasses();
+                });
+                container.appendChild(item);
+            });
+        }
+
+        function updateEditSelectedDivisions() {
+            const container = document.getElementById('editSelectedDivisions');
+            container.innerHTML = '';
+            
+            state.editDivisions.forEach(div => {
+                const item = createSelectedItem(div, () => {
+                    state.editDivisions.delete(div);
+                    updateEditSelectedDivisions();
+                });
+                container.appendChild(item);
+            });
+        }
+
+        // Function to manually toggle modal visibility
+        function manuallyToggleModal(modalId, show) {
+            const modal = document.querySelector(modalId);
+            if (!modal) {
+                console.error('Modal not found:', modalId);
+                return;
+            }
+            
+            if (show) {
+                // Show the modal
+                document.body.classList.add('modal-open');
+                modal.style.display = 'block';
+                modal.style.zIndex = '9999';
+                modal.classList.add('show');
+                // Don't set aria-hidden attribute
+                
+                // Make sure modal dialog and content are visible
+                const modalDialog = modal.querySelector('.modal-dialog');
+                if (modalDialog) {
+                    modalDialog.style.display = 'block';
+                    modalDialog.style.zIndex = '10000';
+                    modalDialog.style.position = 'relative';
+                }
+                
+                const modalContent = modal.querySelector('.modal-content');
+                if (modalContent) {
+                    modalContent.style.display = 'block';
+                    modalContent.style.zIndex = '10001';
+                    modalContent.style.position = 'relative';
+                }
+                
+                // Make sure form is visible
+                const editForm = modal.querySelector('#editTeacherForm');
+                if (editForm) {
+                    editForm.style.display = 'block';
+                    editForm.style.visibility = 'visible';
+                    editForm.style.zIndex = '10002';
+                }
+                
+                // Reset scroll position
+                const modalBody = modal.querySelector('.modal-body');
+                if (modalBody) {
+                    modalBody.scrollTop = 0;
+                    modalBody.style.display = 'block';
+                    modalBody.style.visibility = 'visible';
+                }
+                
+                // Create backdrop if it doesn't exist
+                let backdrop = document.querySelector('.modal-backdrop');
+                if (!backdrop) {
+                    backdrop = document.createElement('div');
+                    backdrop.className = 'modal-backdrop fade show';
+                    backdrop.style.zIndex = '9990';
+                    document.body.appendChild(backdrop);
+                }
+            } else {
+                // Hide the modal
+                document.body.classList.remove('modal-open');
+                modal.style.display = 'none';
+                modal.classList.remove('show');
+                // Don't set aria-hidden attribute
+                
+                // Remove backdrop
+                const backdrop = document.querySelector('.modal-backdrop');
+                if (backdrop) {
+                    backdrop.remove();
+                }
+            }
+        }
+
+        // No longer needed - Bootstrap handles modal positioning
+
+        // Function to ensure modal is scrollable
+        function ensureModalScrollable() {
+            const modalBody = document.querySelector('#editTeacherModal .modal-body');
+            if (!modalBody) {
+                console.error('Modal body not found');
+                return;
+            }
+            
+            // Set modal body to be scrollable
+            modalBody.style.overflowY = 'auto';
+            modalBody.style.maxHeight = '80vh';
+            
+            // Ensure the form is visible
+            const editForm = document.querySelector('#editTeacherForm');
+            if (editForm) {
+                editForm.style.display = 'block';
+                editForm.style.visibility = 'visible';
+            }
+            
+            // Reset scroll position to top
+            modalBody.scrollTop = 0;
+            
+            console.log('Modal scrolling enabled');
+        }
+
+        // Update the editTeacher function to position the modal
+        async function editTeacher(teacherId) {
+            console.log('Edit button clicked for teacher ID:', teacherId);
+            const loadingOverlay = document.getElementById('loadingOverlay');
+            loadingOverlay.style.display = 'flex';
+
+            try {
+                console.log('Fetching teacher details for ID:', teacherId);
+                const token = localStorage.getItem('auth_token');
+                console.log('Using auth token:', token ? 'Token exists' : 'No token');
+                
+                const response = await fetch(`/api/admin/teachers/${teacherId}`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                console.log('Teacher details response status:', response.status);
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    console.error('Error response data:', errorData);
+                    throw new Error(`Failed to fetch teacher details: ${errorData.message || response.statusText}`);
+                }
+
+                const teacher = await response.json();
+                console.log('Teacher details fetched:', teacher);
+                
+                // Clear previous selections
+                state.editDepartments.clear();
+                state.editClasses.clear();
+                state.editDivisions.clear();
+                
+                // Add current selections to state
+                if (Array.isArray(teacher.department)) {
+                    teacher.department.forEach(dept => state.editDepartments.add(dept));
+                } else if (teacher.department) {
+                    state.editDepartments.add(teacher.department);
+                }
+                
+                if (Array.isArray(teacher.classes)) {
+                    teacher.classes.forEach(cls => state.editClasses.add(cls));
+                } else if (teacher.classes) {
+                    state.editClasses.add(teacher.classes);
+                }
+                
+                if (Array.isArray(teacher.divisions)) {
+                    teacher.divisions.forEach(div => state.editDivisions.add(div));
+                } else if (teacher.divisions) {
+                    state.editDivisions.add(teacher.divisions);
+                }
+                
+                console.log('Populated edit form state:', {
+                    departments: Array.from(state.editDepartments),
+                    classes: Array.from(state.editClasses),
+                    divisions: Array.from(state.editDivisions)
+                });
+                
+                // Update UI
+                document.getElementById('editTeacherId').value = teacher._id;
+                document.getElementById('editName').value = teacher.name;
+                document.getElementById('editEmail').value = teacher.email;
+                document.getElementById('editMobile').value = teacher.mobile;
+                document.getElementById('editDesignation').value = teacher.designation;
+                
+                // Clear existing selections in the UI
+                document.getElementById('editSelectedDepartments').innerHTML = '';
+                document.getElementById('editSelectedClasses').innerHTML = '';
+                document.getElementById('editSelectedDivisions').innerHTML = '';
+                
+                // Update UI with selections
+                updateEditSelectedDepartments();
+                updateEditSelectedClasses();
+                updateEditSelectedDivisions();
+                
+                // Check if modal exists and is properly structured
+                const modalCheck = checkModalInDOM();
+                console.log('Modal check before showing:', modalCheck);
+                
+                // Try to show the modal using jQuery
+                try {
+                    // First ensure the modal body is ready for scrolling
+                    const modalBody = document.querySelector('#editTeacherModal .modal-body');
+                    if (modalBody) {
+                        console.log('Preparing modal body for scrolling');
+                        modalBody.style.overflowY = 'auto';
+                        modalBody.style.maxHeight = '80vh'; // Increased from 60vh to 80vh
+                        modalBody.scrollTop = 0;
+                    }
+                    
+                    // Remove aria-hidden attribute before showing the modal
+                    $('#editTeacherModal').removeAttr('aria-hidden');
+                    
+                    // Show the modal
+                    $('#editTeacherModal').modal({
+                        show: true,
+                        backdrop: true,
+                        keyboard: true
+                    });
+                    
+                    // Apply fixes after modal is shown
+                    setTimeout(() => {
+                        // Ensure scrolling works
+                        ensureModalScrollable();
+                        console.log('Modal should now be visible and scrollable');
+                    }, 100);
+                    
+                    // Double check after a bit longer delay
+                    setTimeout(() => {
+                        const modalElement = document.getElementById('editTeacherModal');
+                        const isVisible = modalElement.classList.contains('show') && 
+                                          window.getComputedStyle(modalElement).display !== 'none';
+                        
+                        console.log('Modal visible check:', isVisible);
+                        
+                        // If still not visible, use manual method
+                        if (!isVisible) {
+                            console.log('Using manual method to show modal');
+                            manuallyToggleModal('#editTeacherModal', true);
+                            ensureModalScrollable();
+                        }
+                    }, 300);
+                } catch (error) {
+                    console.error('Error showing modal with jQuery:', error);
+                    // Use manual method as fallback
+                    manuallyToggleModal('#editTeacherModal', true);
+                    
+                    setTimeout(() => {
+                        ensureModalScrollable();
+                    }, 100);
+                }
+                
+            } catch (error) {
+                console.error('Error fetching teacher details:', error);
+                showError(error.message || 'Failed to fetch teacher details');
+            } finally {
+                loadingOverlay.style.display = 'none';
+            }
+        }
+
+        async function handleEditSubmit(event) {
+            event.preventDefault();
+            console.log('Edit form submitted');
+            
+            // Clear any existing error messages
+            const existingAlerts = document.querySelectorAll('.alert');
+            existingAlerts.forEach(alert => alert.remove());
+            
+            console.log('Edit form submission - current state:', {
+                departments: Array.from(state.editDepartments),
+                classes: Array.from(state.editClasses),
+                divisions: Array.from(state.editDivisions)
+            });
+            
+            try {
+            let hasError = false;
+            
+            if (state.editDepartments.size === 0) {
+                showError('Please select at least one department');
+                document.getElementById('editDepartment').focus();
+                hasError = true;
+            }
+            
+            if (state.editClasses.size === 0) {
+                showError('Please select at least one class');
+                if (!hasError) {
+                    document.getElementById('editClasses').focus();
+                }
+                hasError = true;
+            }
+
+            if (hasError) {
+                return;
+            }
+
+            const teacherId = document.getElementById('editTeacherId').value;
+                console.log('Updating teacher with ID:', teacherId);
+            
+            const formData = {
+                name: document.getElementById('editName').value,
+                email: document.getElementById('editEmail').value,
+                mobile: document.getElementById('editMobile').value,
+                designation: document.getElementById('editDesignation').value,
+                department: Array.from(state.editDepartments),
+                classes: Array.from(state.editClasses),
+                divisions: Array.from(state.editDivisions)
+            };
+
+                console.log('Submitting teacher update with data:', formData);
+
+            const loadingOverlay = document.getElementById('loadingOverlay');
+            loadingOverlay.style.display = 'flex';
+
+                const token = localStorage.getItem('auth_token');
+                const response = await fetch(`/api/admin/teachers/${teacherId}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify(formData)
+                });
+
+                console.log('Update response status:', response.status);
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    console.error('Error response:', error);
+                    throw new Error(error.message || 'Failed to update teacher');
+                }
+
+                const updatedTeacher = await response.json();
+                console.log('Teacher updated successfully:', updatedTeacher);
+
+                showSuccess('Teacher updated successfully');
+                
+                // Hide modal using both methods to ensure it closes
+                try {
+                $('#editTeacherModal').modal('hide');
+                } catch (error) {
+                    console.error('Error hiding modal with jQuery:', error);
+                }
+                
+                // Also try manual method
+                manuallyToggleModal('#editTeacherModal', false);
+                
+                // Reload teachers after a short delay
+                setTimeout(() => {
+                loadTeachers();
+                }, 500);
+            } catch (error) {
+                console.error('Error updating teacher:', error);
+                showError(error.message || 'Failed to update teacher');
+            } finally {
+                const loadingOverlay = document.getElementById('loadingOverlay');
+                loadingOverlay.style.display = 'none';
+            }
+        }
+
+        // Debugging function to check modal state
+        function checkModalState() {
+            const modal = document.getElementById('editTeacherModal');
+            console.log('Modal element exists:', modal ? true : false);
+            if (modal) {
+                console.log('Modal display style:', window.getComputedStyle(modal).display);
+                console.log('Modal classes:', modal.className);
+                console.log('Modal aria-hidden:', modal.getAttribute('aria-hidden'));
+            }
+            
+            const backdrop = document.querySelector('.modal-backdrop');
+            console.log('Backdrop element exists:', backdrop ? true : false);
+            if (backdrop) {
+                console.log('Backdrop display style:', window.getComputedStyle(backdrop).display);
+                console.log('Backdrop classes:', backdrop.className);
+            }
+            
+            console.log('Body classes:', document.body.className);
+        }
+
+        // Function to force show the modal
+        function forceShowModal(modalId) {
+            console.log('Attempting to force show modal:', modalId);
+            
+            try {
+                const modal = $(modalId);
+                console.log('Modal jQuery object:', modal.length > 0 ? 'Found' : 'Not found');
+                
+                // Remove any existing backdrop
+                $('.modal-backdrop').remove();
+                
+                // Remove any modal-open class from body
+                $('body').removeClass('modal-open').css('padding-right', '');
+                
+                // Reset modal state
+                modal.removeClass('show');
+                modal.removeAttr('style');
+                modal.removeAttr('aria-hidden');
+                modal.removeAttr('aria-modal');
+                
+                // Make sure modal is visible
+                modal.css('display', 'block');
+                modal.addClass('show');
+                modal.attr('aria-modal', 'true');
+                modal.attr('aria-hidden', 'false');
+                
+                // Add backdrop manually
+                $('<div class="modal-backdrop fade show"></div>').appendTo(document.body);
+                
+                // Add modal-open class to body
+                $('body').addClass('modal-open');
+                
+                console.log('Force showed modal:', modalId);
+                
+                // Log the modal content for debugging
+                console.log('Modal content exists:', modal.find('.modal-content').length > 0);
+                console.log('Modal body exists:', modal.find('.modal-body').length > 0);
+                console.log('Edit form exists:', modal.find('#editTeacherForm').length > 0);
+            } catch (error) {
+                console.error('Error showing modal:', error);
+            }
+        }
+
+        // Call this function after attempting to show the modal
+        setTimeout(() => {
+            console.log('Checking modal state after show attempt:');
+            checkModalState();
+        }, 200);
+    </script>
+</body>
+</html> 

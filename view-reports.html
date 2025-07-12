@@ -1,0 +1,1921 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>View Attendance Reports</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <!-- Update script reference to use absolute path -->
+    <script src="/BHARATI/assets/js/common.js" defer></script>
+    <!-- Fallback script in case the above fails -->
+    <script>
+        // Check if common.js failed to load
+        window.addEventListener('error', function(e) {
+            if (e.target.tagName === 'SCRIPT' && e.target.src.includes('common.js')) {
+                console.log('Attempting to load common.js from alternate path');
+                // Try loading from different paths
+                const alternativePaths = [
+                    './assets/js/common.js',
+                    '../assets/js/common.js',
+                    '/assets/js/common.js'
+                ];
+                
+                // Try each path
+                for (const path of alternativePaths) {
+                    const script = document.createElement('script');
+                    script.src = path;
+                    script.defer = true;
+                    document.head.appendChild(script);
+                    console.log('Trying to load from:', path);
+                }
+            }
+        }, true);
+    </script>
+    <style>
+        /* Loading overlay */
+        #loadingOverlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.9);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+        }
+
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid #1a73e8;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .filter-section {
+            background-color: #f8f9fa;
+            padding: 20px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        .attendance-table th {
+            position: sticky;
+            top: 0;
+            background: white;
+            z-index: 1;
+        }
+        .table-container {
+            max-height: 600px;
+            overflow-y: auto;
+        }
+        .status-present {
+            color: #28a745;
+        }
+        .status-absent {
+            color: #dc3545;
+        }
+        .status-late {
+            color: #ffc107;
+        }
+
+        /* Delete button styles */
+        .delete-record {
+            transition: all 0.2s ease;
+            opacity: 0.8;
+        }
+        
+        .delete-record:hover {
+            opacity: 1;
+            transform: scale(1.1);
+        }
+        
+        /* Highlight row on hover for deletable rows */
+        tr[data-record-id]:hover {
+            background-color: #fff8f8 !important;
+        }
+
+        /* Header styles */
+        .main-header {
+            background: linear-gradient(135deg, #1a73e8 0%, #0d47a1 100%);
+            color: white;
+            padding: 15px 0;
+            margin-bottom: 30px;
+        }
+
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 20px;
+        }
+
+        .back-btn {
+            color: white;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 16px;
+        }
+
+        .back-btn:hover {
+            color: #FFD700;
+            text-decoration: none;
+        }
+
+        /* Progress bar styles */
+        .progress {
+            height: 20px;
+            margin-bottom: 10px;
+        }
+        
+        /* Compact card styles for percentage view */
+        .compact-card {
+            margin-bottom: 15px;
+        }
+        
+        .compact-card .card-header {
+            padding: 8px 15px;
+        }
+        
+        .compact-card .card-body {
+            padding: 12px;
+        }
+        
+        .compact-card h5 {
+            font-size: 1rem;
+            margin-bottom: 0;
+        }
+        
+        .compact-card .progress {
+            height: 18px;
+            margin-bottom: 8px;
+        }
+        
+        .compact-card .table-sm td, 
+        .compact-card .table-sm th {
+            padding: 0.3rem;
+            font-size: 0.85rem;
+        }
+        
+        .compact-card .border.rounded {
+            padding: 5px !important;
+        }
+        
+        .compact-card .border.rounded h5 {
+            font-size: 0.9rem;
+            margin-bottom: 0;
+        }
+        
+        .compact-card .border.rounded small {
+            font-size: 0.7rem;
+        }
+        
+        /* Grid layout for cards */
+        .card-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 15px;
+        }
+        
+        /* Student card specific styles */
+        .student-card {
+            transition: all 0.2s ease;
+        }
+        
+        .student-card:hover {
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        /* Status styles */
+    </style>
+</head>
+<body class="js-loading">
+    <div id="loadingOverlay">
+        <div class="spinner"></div>
+    </div>
+
+    <header class="main-header">
+        <div class="header-content">
+            <a href="/admin-dashboard.html" class="back-btn">
+                <i class="fas fa-arrow-left"></i>
+                Back to Dashboard
+            </a>
+            <h2 class="mb-0">Attendance Reports</h2>
+            <div style="width: 100px;"></div>
+        </div>
+    </header>
+
+    <div class="container">
+        <div class="filter-section">
+            <div class="row">
+                <div class="col-md-3">
+                    <div class="form-group">
+                        <label for="department">Department</label>
+                        <select class="form-control" id="department" onchange="handleDepartmentChange()">
+                            <option value="">All Departments</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="form-group">
+                        <label for="class">Class</label>
+                        <select class="form-control" id="class" onchange="handleClassChange()">
+                            <option value="">All Classes</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="form-group">
+                        <label for="division">Division</label>
+                        <select class="form-control" id="division">
+                            <option value="">All Divisions</option>
+                            <option value="A">A</option>
+                            <option value="B">B</option>
+                            <option value="C">C</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="form-group">
+                        <label for="sessionType">Session Type</label>
+                        <select class="form-control" id="sessionType">
+                            <option value="">All Sessions</option>
+                            <option value="Lecture">Lecture</option>
+                            <option value="Practical">Practical</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="form-group">
+                        <label for="startDate">Date</label>
+                        <input type="date" class="form-control" id="startDate">
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="form-group">
+                        <span class="d-block">&nbsp;</span>
+                        <button class="btn btn-primary btn-block" onclick="fetchAttendanceRecords()">
+                            <i class="fas fa-search"></i> Search
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div class="row mt-2">
+                <div class="col-12">
+                    <div class="btn-group" role="group">
+                        <button type="button" class="btn btn-outline-primary active" id="detailViewBtn" onclick="switchView('detail')">
+                            <i class="fas fa-list"></i> Detailed View
+                        </button>
+                        <button type="button" class="btn btn-outline-primary" id="percentageViewBtn" onclick="switchView('percentage')">
+                            <i class="fas fa-chart-pie"></i> Percentage View
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="alertContainer"></div>
+
+        <!-- Detailed View -->
+        <div id="detailView" class="view-section">
+            <div class="table-container">
+                <table class="table table-striped attendance-table">
+                    <thead>
+                        <tr>
+                            <th>
+                                <div class="custom-control custom-checkbox" id="selectAllContainer" style="display: none;">
+                                    <input type="checkbox" class="custom-control-input" id="selectAll">
+                                    <label class="custom-control-label" for="selectAll"></label>
+                                </div>
+                            </th>
+                            <th>Date</th>
+                            <th>Department</th>
+                            <th>Class</th>
+                            <th>Division</th>
+                            <th>Subject</th>
+                            <th>Session Type</th>
+                            <th>Student Name</th>
+                            <th>Roll No</th>
+                            <th>Status</th>
+                            <th>Remarks</th>
+                            <th>Teacher</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="attendanceTableBody">
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Percentage View -->
+        <div id="percentageView" class="view-section" style="display: none;">
+            <div class="row">
+                <div class="col-12">
+                    <div class="card mb-3">
+                        <div class="card-header bg-primary text-white py-2">
+                            <h5 class="mb-0">Attendance Percentage by Class</h5>
+                        </div>
+                        <div class="card-body py-2">
+                            <div id="percentageChartContainer" style="max-height: 250px;">
+                                <canvas id="attendanceChart" height="200"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <ul class="nav nav-tabs mb-3" id="percentageTabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active py-1 px-2" id="department-tab" data-toggle="tab" data-target="#departmentView" type="button" role="tab" aria-controls="departmentView" aria-selected="true">
+                        <i class="fas fa-building"></i> Departments
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link py-1 px-2" id="class-tab" data-toggle="tab" data-target="#classView" type="button" role="tab" aria-controls="classView" aria-selected="false">
+                        <i class="fas fa-chalkboard"></i> Classes
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link py-1 px-2" id="student-tab" data-toggle="tab" data-target="#studentView" type="button" role="tab" aria-controls="studentView" aria-selected="false">
+                        <i class="fas fa-user-graduate"></i> Students
+                    </button>
+                </li>
+            </ul>
+            
+            <div class="tab-content" id="percentageTabsContent">
+                <!-- Department View -->
+                <div class="tab-pane fade show active" id="departmentView" role="tabpanel" aria-labelledby="department-tab">
+                    <div id="departmentPercentageContainer">
+                        <!-- Department percentage cards will be added here -->
+                    </div>
+                </div>
+                
+                <!-- Class View -->
+                <div class="tab-pane fade" id="classView" role="tabpanel" aria-labelledby="class-tab">
+                    <div id="classPercentageContainer">
+                        <!-- Class percentage cards will be added here -->
+                    </div>
+                </div>
+                
+                <!-- Student View -->
+                <div class="tab-pane fade" id="studentView" role="tabpanel" aria-labelledby="student-tab">
+                    <div class="mb-2 row">
+                        <div class="col-md-6">
+                            <div class="input-group input-group-sm">
+                                <div class="input-group-prepend">
+                                    <span class="input-group-text"><i class="fas fa-search"></i></span>
+                                </div>
+                                <input type="text" class="form-control" id="studentSearch" placeholder="Search by name or roll number...">
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="input-group input-group-sm">
+                                <div class="input-group-prepend">
+                                    <select class="form-control form-control-sm" id="percentageComparison" style="width: auto; border-top-right-radius: 0; border-bottom-right-radius: 0;">
+                                        <option value="gte" selected>≥</option>
+                                        <option value="lte">≤</option>
+                                        <option value="eq">=</option>
+                                    </select>
+                                </div>
+                                <input type="number" class="form-control form-control-sm" id="percentageFilter" placeholder="% attendance" min="0" max="100">
+                                <div class="input-group-append">
+                                    <button class="btn btn-sm btn-outline-primary" type="button" id="percentageFilterBtn" onclick="filterStudentsByPercentage()">
+                                        <i class="fas fa-filter"></i> Filter
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-2">
+                            <button class="btn btn-sm btn-outline-secondary btn-block" type="button" onclick="resetStudentFilters()">
+                                <i class="fas fa-sync"></i> Reset
+                            </button>
+                        </div>
+                    </div>
+                    <div id="studentPercentageContainer">
+                        <!-- Student percentage cards will be added here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="mt-3">
+            <button class="btn btn-success" onclick="exportToExcel()" id="exportButton">
+                <i class="fas fa-download"></i> Export to Excel
+            </button>
+            <button class="btn btn-danger" id="batchDeleteBtn" style="display: none;">
+                <i class="fas fa-trash"></i> Delete Selected Records
+            </button>
+        </div>
+
+    </div>
+
+    <!-- Delete Confirmation Modal -->
+    <div class="modal fade" id="deleteConfirmationModal" tabindex="-1" role="dialog" aria-labelledby="deleteConfirmationModalLabel" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title" id="deleteConfirmationModalLabel">Confirm Deletion</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <p id="deleteConfirmationMessage">Are you sure you want to delete this attendance record? This action cannot be undone.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-danger" id="confirmDeleteBtn">Delete</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Initialize the page
+        document.addEventListener('DOMContentLoaded', async () => {
+            try {
+                // Check authentication
+                const token = localStorage.getItem('auth_token');
+                const userRole = localStorage.getItem('user_role');
+                
+                if (!token || !['admin', 'teacher'].includes(userRole)) {
+                    window.location.href = '/login.html';
+                    return;
+                }
+
+                // Show loading overlay
+                const loadingOverlay = document.getElementById('loadingOverlay');
+                loadingOverlay.style.display = 'flex';
+
+                // Verify token with server
+                const response = await fetch('/api/auth/verify', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error('Invalid session');
+                }
+
+                // Initialize page data
+                await loadDepartments();
+                document.getElementById('startDate').value = new Date().toISOString().split('T')[0];
+                await fetchAttendanceRecords();
+                
+                // Set initial export button text
+                document.getElementById('exportButton').innerHTML = '<i class="fas fa-download"></i> Export Detailed Records';
+                
+                // Add tab change listeners for export button text
+                document.getElementById('department-tab').addEventListener('click', () => updateExportButtonForTab('department'));
+                document.getElementById('class-tab').addEventListener('click', () => updateExportButtonForTab('class'));
+                document.getElementById('student-tab').addEventListener('click', () => updateExportButtonForTab('student'));
+                
+                // Initialize delete confirmation modal
+                initializeDeleteModal();
+                
+                // Add event listener for batch delete button
+                document.getElementById('batchDeleteBtn').addEventListener('click', function(e) {
+                    e.preventDefault();
+                    confirmDeleteSelected();
+                });
+                
+                // Remove loading states
+                document.body.classList.remove('js-loading');
+                loadingOverlay.style.display = 'none';
+            } catch (error) {
+                console.error('Initialization error:', error);
+                localStorage.clear();
+                window.location.href = '/login.html';
+            }
+        });
+        
+        // Update export button text based on active tab
+        function updateExportButtonForTab(tabType) {
+            const exportButton = document.getElementById('exportButton');
+            
+            if (tabType === 'department') {
+                exportButton.innerHTML = '<i class="fas fa-download"></i> Export Department Report';
+            } else if (tabType === 'class') {
+                exportButton.innerHTML = '<i class="fas fa-download"></i> Export Class Report';
+            } else if (tabType === 'student') {
+                exportButton.innerHTML = '<i class="fas fa-download"></i> Export Student Report';
+            }
+        }
+
+        function showError(message) {
+            const alertContainer = document.getElementById('alertContainer');
+            const alert = document.createElement('div');
+            alert.className = 'alert alert-danger alert-dismissible fade show';
+            alert.innerHTML = `
+                <strong>Error!</strong> ${message}
+                <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            `;
+            alertContainer.appendChild(alert);
+            setTimeout(() => alert.remove(), 5000);
+        }
+
+        async function loadDepartments() {
+            try {
+                const token = localStorage.getItem('auth_token');
+                if (!token) {
+                    window.location.href = '/login.html';
+                    return;
+                }
+
+                const response = await fetch('/api/admin/departments', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                
+                if (response.status === 401) {
+                    localStorage.clear();
+                    window.location.href = '/login.html';
+                    return;
+                }
+                
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.message || 'Failed to fetch departments');
+                }
+                
+                const departments = await response.json();
+                const departmentSelect = document.getElementById('department');
+                
+                // Clear existing options first
+                departmentSelect.innerHTML = '<option value="">All Departments</option>';
+                
+                // Sort departments alphabetically
+                departments.sort().forEach(dept => {
+                    const option = document.createElement('option');
+                    option.value = dept;
+                    option.textContent = dept;
+                    departmentSelect.appendChild(option);
+                });
+            } catch (error) {
+                console.error('Error loading departments:', error);
+                showError(error.message || 'Failed to load departments');
+            }
+        }
+
+        function handleDepartmentChange() {
+            const department = document.getElementById('department').value;
+            const classSelect = document.getElementById('class');
+            
+            // Clear existing options
+            classSelect.innerHTML = '<option value="">All Classes</option>';
+            
+            if (department) {
+                // Add classes based on department
+                const classes = ['First Year', 'Second Year', 'Third Year', 'Fourth Year'];
+                classes.forEach(cls => {
+                    const option = document.createElement('option');
+                    option.value = cls;
+                    option.textContent = cls;
+                    classSelect.appendChild(option);
+                });
+            }
+        }
+
+        async function fetchAttendanceRecords() {
+            try {
+                // Show loading overlay
+                const loadingOverlay = document.getElementById('loadingOverlay');
+                loadingOverlay.style.display = 'flex';
+                
+                // Get filter values
+                const department = document.getElementById('department').value;
+                const className = document.getElementById('class').value;
+                const division = document.getElementById('division').value;
+                const sessionType = document.getElementById('sessionType').value;
+                const date = document.getElementById('startDate').value;
+                
+                // Build query string
+                let queryParams = [];
+                if (department) queryParams.push(`department=${encodeURIComponent(department)}`);
+                if (className) queryParams.push(`class=${encodeURIComponent(className)}`);
+                if (division) queryParams.push(`division=${encodeURIComponent(division)}`);
+                if (sessionType) queryParams.push(`sessionType=${encodeURIComponent(sessionType)}`);
+                if (date) queryParams.push(`date=${encodeURIComponent(date)}`);
+                
+                const queryString = queryParams.length > 0 ? `?${queryParams.join('&')}` : '';
+                
+                // Use authenticatedFetch instead of regular fetch
+                const records = await authenticatedFetch(`/api/attendance/records${queryString}`);
+                console.log(`Fetched ${records.length} attendance records`);
+                
+                // Display records in the table
+                populateAttendanceTable(records, localStorage.getItem('user_role') === 'admin');
+                
+                // Calculate and display attendance percentages
+                if (records.length > 0) {
+                    await fetchAttendancePercentage();
+                } else {
+                    document.getElementById('departmentPercentageContainer').innerHTML = '<div class="alert alert-info">No attendance data available for the selected filters</div>';
+                    document.getElementById('classPercentageContainer').innerHTML = '<div class="alert alert-info">No attendance data available for the selected filters</div>';
+                    document.getElementById('studentPercentageContainer').innerHTML = '<div class="alert alert-info">No attendance data available for the selected filters</div>';
+                }
+                
+                // Hide loading overlay
+                loadingOverlay.style.display = 'none';
+            } catch (error) {
+                console.error('Error fetching attendance records:', error);
+                showError(error.message || 'Failed to fetch attendance records');
+                
+                // Hide loading overlay
+                const loadingOverlay = document.getElementById('loadingOverlay');
+                loadingOverlay.style.display = 'none';
+            }
+        }
+
+        function populateAttendanceTable(records, isAdmin) {
+            const tbody = document.getElementById('attendanceTableBody');
+            tbody.innerHTML = '';
+            
+            if (!records || records.length === 0) {
+                const tr = document.createElement('tr');
+                tr.innerHTML = '<td colspan="13" class="text-center">No attendance records found</td>';
+                tbody.appendChild(tr);
+                return;
+            }
+            
+            // Show or hide the select all checkbox container based on admin status
+            const selectAllContainer = document.getElementById('selectAllContainer');
+            if (selectAllContainer) {
+                selectAllContainer.style.display = isAdmin ? 'block' : 'none';
+            }
+            
+            // Add event listener to select all checkbox
+            const selectAll = document.getElementById('selectAll');
+            if (selectAll) {
+                selectAll.checked = false;
+                selectAll.addEventListener('change', function() {
+                    const checkboxes = document.querySelectorAll('.record-checkbox');
+                    checkboxes.forEach(checkbox => {
+                        checkbox.checked = this.checked;
+                    });
+                    updateBatchDeleteButton();
+                });
+            }
+            
+            records.forEach(record => {
+                if (!record.students || !Array.isArray(record.students)) {
+                    console.error('Invalid record format:', record);
+                    return;
+                }
+
+                record.students.forEach(student => {
+                    if (!student.student || !student.status) {
+                        console.error('Invalid student data:', student);
+                        return;
+                    }
+
+                    const tr = document.createElement('tr');
+                    tr.setAttribute('data-record-id', record._id);
+                    
+                    // Add checkbox for batch selection (only for admin)
+                    const checkboxCell = isAdmin ? 
+                        `<td>
+                            <div class="custom-control custom-checkbox">
+                                <input type="checkbox" class="custom-control-input record-checkbox" id="record-${record._id}-${student.student._id}" 
+                                       data-record-id="${record._id}">
+                                <label class="custom-control-label" for="record-${record._id}-${student.student._id}"></label>
+                            </div>
+                        </td>` : 
+                        '<td></td>';
+                    
+                    // Add delete button only for admin users
+                    const actionCell = isAdmin ? 
+                        `<td>
+                            <button class="btn btn-sm btn-danger delete-record" 
+                                    title="Delete this attendance record" data-record-id="${record._id}">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </td>` : 
+                        '<td>-</td>';
+                    
+                    tr.innerHTML = `
+                        ${checkboxCell}
+                        <td>${new Date(record.date).toLocaleDateString()}</td>
+                        <td>${record.department || '-'}</td>
+                        <td>${record.class || '-'}</td>
+                        <td>${record.division || '-'}</td>
+                        <td>${record.subject || '-'}</td>
+                        <td>${record.sessionType || '-'}</td>
+                        <td>${student.student.name || '-'}</td>
+                        <td>${student.student.rollNo || '-'}</td>
+                        <td class="status-${(student.status || '').toLowerCase()}">${student.status || '-'}</td>
+                        <td>${student.remark || '-'}</td>
+                        <td>${record.teacher?.name || '-'}</td>
+                        ${actionCell}
+                    `;
+                    tbody.appendChild(tr);
+                });
+            });
+            
+            // Add event listeners to delete buttons
+            console.log('Setting up delete button event listeners');
+            document.querySelectorAll('.delete-record').forEach(button => {
+                button.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const recordId = this.getAttribute('data-record-id');
+                    console.log('Delete button clicked for record:', recordId);
+                    if (recordId) {
+                        confirmDeleteRecord(recordId);
+                    } else {
+                        console.error('No record ID found on delete button');
+                    }
+                });
+            });
+            
+            // Add event listeners to checkboxes
+            document.querySelectorAll('.record-checkbox').forEach(checkbox => {
+                checkbox.addEventListener('change', updateBatchDeleteButton);
+            });
+        }
+
+        // Function to update batch delete button visibility based on selected checkboxes
+        function updateBatchDeleteButton() {
+            const checkboxes = document.querySelectorAll('.record-checkbox:checked');
+            const batchDeleteBtn = document.getElementById('batchDeleteBtn');
+            
+            if (checkboxes.length > 0) {
+                batchDeleteBtn.textContent = `Delete Selected Records (${checkboxes.length})`;
+                batchDeleteBtn.style.display = 'inline-block';
+            } else {
+                batchDeleteBtn.style.display = 'none';
+            }
+        }
+
+        // Function to confirm before deleting selected records
+        function confirmDeleteSelected() {
+            const checkboxes = document.querySelectorAll('.record-checkbox:checked');
+            const count = checkboxes.length;
+            
+            if (count === 0) {
+                showError('No records selected for deletion');
+                return;
+            }
+            
+            const recordIds = Array.from(checkboxes).map(checkbox => {
+                return checkbox.getAttribute('data-record-id');
+            });
+            
+            // Remove duplicates (in case multiple students from same record are selected)
+            const uniqueRecordIds = [...new Set(recordIds)];
+            
+            const deleteConfirmationMessage = document.getElementById('deleteConfirmationMessage');
+            deleteConfirmationMessage.textContent = `Are you sure you want to delete ${uniqueRecordIds.length} attendance record(s)? This action cannot be undone.`;
+            
+            // Store the record IDs in a data attribute instead of using onclick
+            document.getElementById('confirmDeleteBtn').setAttribute('data-record-ids', JSON.stringify(uniqueRecordIds));
+            document.getElementById('confirmDeleteBtn').setAttribute('data-action', 'batch-delete');
+            
+            $('#deleteConfirmationModal').modal('show');
+        }
+
+        // Function to delete multiple attendance records
+        async function deleteMultipleRecords(recordIds) {
+            try {
+                console.log('Deleting multiple records:', recordIds);
+                const token = localStorage.getItem('auth_token');
+                if (!token) {
+                    window.location.href = '/login.html';
+                    return;
+                }
+
+                // Show loading overlay
+                const loadingOverlay = document.getElementById('loadingOverlay');
+                loadingOverlay.style.display = 'flex';
+                
+                let successCount = 0;
+                let failCount = 0;
+                
+                // Process records one by one
+                for (const recordId of recordIds) {
+                    try {
+                        const response = await fetch(`/api/attendance/records/${recordId}`, {
+                            method: 'DELETE',
+                            headers: {
+                                'Authorization': `Bearer ${token}`,
+                                'Content-Type': 'application/json'
+                            }
+                        });
+                        
+                        if (response.ok) {
+                            successCount++;
+                            
+                            // Remove the record from the table
+                            const rows = document.querySelectorAll(`tr[data-record-id="${recordId}"]`);
+                            rows.forEach(row => row.remove());
+                        } else {
+                            failCount++;
+                            console.error(`Failed to delete record ${recordId}:`, await response.json());
+                        }
+                    } catch (error) {
+                        failCount++;
+                        console.error(`Error deleting record ${recordId}:`, error);
+                    }
+                }
+                
+                // Update the batch delete button
+                updateBatchDeleteButton();
+                
+                // Reset the select all checkbox
+                document.getElementById('selectAll').checked = false;
+
+                // Show result message
+                const alertContainer = document.getElementById('alertContainer');
+                const alert = document.createElement('div');
+                
+                if (successCount > 0 && failCount === 0) {
+                    alert.className = 'alert alert-success alert-dismissible fade show';
+                    alert.innerHTML = `
+                        <strong>Success!</strong> ${successCount} attendance record(s) deleted successfully.
+                        <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    `;
+                } else if (successCount > 0 && failCount > 0) {
+                    alert.className = 'alert alert-warning alert-dismissible fade show';
+                    alert.innerHTML = `
+                        <strong>Partial Success!</strong> ${successCount} record(s) deleted successfully, but ${failCount} record(s) failed to delete.
+                        <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    `;
+                } else {
+                    alert.className = 'alert alert-danger alert-dismissible fade show';
+                    alert.innerHTML = `
+                        <strong>Error!</strong> Failed to delete any records.
+                        <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    `;
+                }
+                
+                alertContainer.appendChild(alert);
+                setTimeout(() => alert.remove(), 5000);
+                
+                // If no records left, show "No records found" message
+                const tbody = document.getElementById('attendanceTableBody');
+                if (tbody.children.length === 0) {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = '<td colspan="13" class="text-center">No attendance records found</td>';
+                    tbody.appendChild(tr);
+                }
+
+            } catch (error) {
+                console.error('Error during batch deletion:', error);
+                showError(error.message || 'Failed to delete attendance records');
+            } finally {
+                // Hide loading overlay
+                const loadingOverlay = document.getElementById('loadingOverlay');
+                loadingOverlay.style.display = 'none';
+            }
+        }
+
+        // Function to confirm before deleting a single record
+        function confirmDeleteRecord(recordId) {
+            console.log('Confirming delete for record ID:', recordId);
+            const deleteConfirmationMessage = document.getElementById('deleteConfirmationMessage');
+            deleteConfirmationMessage.textContent = `Are you sure you want to delete this attendance record? This action cannot be undone.`;
+            
+            // Store the record ID in a data attribute instead of using onclick
+            const confirmBtn = document.getElementById('confirmDeleteBtn');
+            confirmBtn.setAttribute('data-record-ids', JSON.stringify([recordId]));
+            confirmBtn.setAttribute('data-action', 'single-delete');
+            console.log('Set data attributes on confirm button:', {
+                'data-record-ids': confirmBtn.getAttribute('data-record-ids'),
+                'data-action': confirmBtn.getAttribute('data-action')
+            });
+            
+            // Show the modal
+            $('#deleteConfirmationModal').modal('show');
+        }
+
+        // Function to delete a single attendance record
+        async function deleteAttendanceRecord(recordId) {
+            try {
+                console.log('Starting deletion of record:', recordId);
+                const token = localStorage.getItem('auth_token');
+                if (!token) {
+                    window.location.href = '/login.html';
+                    return;
+                }
+
+                // Show loading overlay
+                const loadingOverlay = document.getElementById('loadingOverlay');
+                loadingOverlay.style.display = 'flex';
+
+                console.log('Sending DELETE request to:', `/api/attendance/records/${recordId}`);
+                
+                const response = await fetch(`/api/attendance/records/${recordId}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                console.log('Delete response status:', response.status);
+
+                if (response.status === 401) {
+                    console.error('Unauthorized - redirecting to login');
+                    window.location.href = '/login.html';
+                    return;
+                }
+
+                if (response.status === 403) {
+                    console.error('Forbidden - user does not have permission');
+                    showError('You do not have permission to delete attendance records');
+                    return;
+                }
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    console.error('Error response:', errorData);
+                    throw new Error(errorData.message || 'Failed to delete attendance record');
+                }
+
+                const data = await response.json();
+                console.log('Deletion response:', data);
+
+                // Remove the record from the table
+                const rows = document.querySelectorAll(`tr[data-record-id="${recordId}"]`);
+                console.log(`Found ${rows.length} rows to remove with ID ${recordId}`);
+                rows.forEach(row => row.remove());
+
+                // Update the batch delete button
+                updateBatchDeleteButton();
+
+                // Show success message
+                const alertContainer = document.getElementById('alertContainer');
+                const alert = document.createElement('div');
+                alert.className = 'alert alert-success alert-dismissible fade show';
+                alert.innerHTML = `
+                    <strong>Success!</strong> Attendance record deleted successfully.
+                    <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                `;
+                alertContainer.appendChild(alert);
+                setTimeout(() => alert.remove(), 5000);
+
+                // If no records left, show "No records found" message
+                const tbody = document.getElementById('attendanceTableBody');
+                if (tbody.children.length === 0) {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = '<td colspan="13" class="text-center">No attendance records found</td>';
+                    tbody.appendChild(tr);
+                }
+
+            } catch (error) {
+                console.error('Error deleting record:', error);
+                showError(error.message || 'Failed to delete attendance record');
+            } finally {
+                // Hide loading overlay
+                const loadingOverlay = document.getElementById('loadingOverlay');
+                loadingOverlay.style.display = 'none';
+            }
+        }
+
+        function exportToExcel() {
+            const currentView = document.getElementById('percentageView').style.display === 'none' ? 'detail' : 'percentage';
+            
+            // Show loading overlay
+            const loadingOverlay = document.getElementById('loadingOverlay');
+            loadingOverlay.style.display = 'flex';
+            
+            // Use setTimeout to allow the UI to update before starting the export
+            setTimeout(() => {
+                try {
+                    if (currentView === 'detail') {
+                        exportDetailedViewToExcel();
+                    } else {
+                        exportPercentageViewToExcel();
+                    }
+                } catch (error) {
+                    console.error('Export error:', error);
+                    showError('Failed to export data: ' + error.message);
+                } finally {
+                    // Hide loading overlay
+                    loadingOverlay.style.display = 'none';
+                }
+            }, 100);
+        }
+        
+        function exportDetailedViewToExcel() {
+            const table = document.querySelector('.attendance-table');
+            const rows = Array.from(table.querySelectorAll('tr'));
+            
+            let csv = [];
+            rows.forEach(row => {
+                const cells = Array.from(row.querySelectorAll('th, td'));
+                const rowData = cells.map(cell => {
+                    let text = cell.textContent;
+                    // Escape quotes and wrap in quotes if contains comma
+                    if (text.includes(',')) {
+                        text = `"${text.replace(/"/g, '""')}"`;
+                    }
+                    return text;
+                });
+                csv.push(rowData.join(','));
+            });
+
+            const csvContent = csv.join('\n');
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const today = new Date().toISOString().split('T')[0];
+            
+            // Get filters for filename
+            const department = document.getElementById('department').value || 'All';
+            const className = document.getElementById('class').value || 'All';
+            const date = document.getElementById('startDate').value || today;
+            const sessionType = document.getElementById('sessionType').value || 'All';
+            
+            link.href = URL.createObjectURL(blob);
+            link.download = `attendance_detail_${date}_${department}_${className}_${sessionType}.csv`;
+            link.click();
+            
+            // Show success message
+            const alertContainer = document.getElementById('alertContainer');
+            const alert = document.createElement('div');
+            alert.className = 'alert alert-success alert-dismissible fade show';
+            alert.innerHTML = `
+                <strong>Success!</strong> Detailed attendance records exported successfully.
+                <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            `;
+            alertContainer.appendChild(alert);
+            setTimeout(() => alert.remove(), 5000);
+        }
+        
+        function exportPercentageViewToExcel() {
+            // Get the active tab
+            const activeTab = document.querySelector('#percentageTabs .nav-link.active').getAttribute('id');
+            let data = [];
+            let filename = '';
+            let successMessage = '';
+            
+            // Get filters for filename
+            const department = document.getElementById('department').value || 'All';
+            const className = document.getElementById('class').value || 'All';
+            const startDate = document.getElementById('startDate').value;
+            const sessionType = document.getElementById('sessionType').value || 'All';
+            
+            // Prepare headers based on active tab
+            if (activeTab === 'department-tab') {
+                // Export department data
+                const departments = Array.from(document.querySelectorAll('#departmentPercentageContainer .card'));
+                
+                // Add headers
+                data.push(['Department', 'Total Students', 'Present', 'Absent', 'Late', 'Attendance Percentage']);
+                
+                // Add department data
+                departments.forEach(dept => {
+                    const deptName = dept.querySelector('.card-header h5').textContent;
+                    const presentCount = dept.querySelector('.bg-success h5').textContent;
+                    const absentCount = dept.querySelector('.bg-danger h5').textContent;
+                    const lateCount = dept.querySelector('.bg-warning h5').textContent;
+                    const percentage = dept.querySelector('.progress-bar').textContent.trim();
+                    
+                    data.push([deptName, parseInt(presentCount) + parseInt(absentCount) + parseInt(lateCount), presentCount, absentCount, lateCount, percentage]);
+                    
+                    // Add class data for this department if available
+                    const classTable = dept.querySelector('table');
+                    if (classTable) {
+                        data.push(['', '', '', '', '', '']);
+                        data.push(['Class', 'Present', 'Absent', 'Late', 'Percentage', '']);
+                        
+                        const classRows = Array.from(classTable.querySelectorAll('tbody tr'));
+                        classRows.forEach(row => {
+                            const cells = Array.from(row.querySelectorAll('td'));
+                            const rowData = cells.map(cell => {
+                                // For percentage cell, get the text from progress bar
+                                if (cell.querySelector('.progress-bar')) {
+                                    return cell.querySelector('.progress-bar').textContent.trim();
+                                }
+                                return cell.textContent;
+                            });
+                            data.push([...rowData, '']);
+                        });
+                        data.push(['', '', '', '', '', '']);
+                    }
+                });
+                
+                filename = `attendance_by_department_${startDate}_${department}_${className}_${sessionType}.csv`;
+            } 
+            else if (activeTab === 'class-tab') {
+                // Export class data
+                const classes = Array.from(document.querySelectorAll('#classPercentageContainer .card'));
+                
+                // Add headers
+                data.push(['Class', 'Department', 'Total Students', 'Present', 'Absent', 'Late', 'Attendance Percentage']);
+                
+                // Add class data
+                classes.forEach(cls => {
+                    const className = cls.querySelector('.card-header h5').textContent.split(' ')[0];
+                    const deptName = cls.querySelector('.badge').textContent;
+                    const presentCount = cls.querySelector('.bg-success h5').textContent;
+                    const absentCount = cls.querySelector('.bg-danger h5').textContent;
+                    const lateCount = cls.querySelector('.bg-warning h5').textContent;
+                    const percentage = cls.querySelector('.progress-bar').textContent.trim();
+                    
+                    data.push([className, deptName, parseInt(presentCount) + parseInt(absentCount) + parseInt(lateCount), presentCount, absentCount, lateCount, percentage]);
+                    
+                    // Add subject data for this class if available
+                    const subjectTable = cls.querySelector('table');
+                    if (subjectTable) {
+                        data.push(['', '', '', '', '', '', '']);
+                        data.push(['Subject', 'Session Type', 'Present', 'Absent', 'Late', 'Percentage', '']);
+                        
+                        const subjectRows = Array.from(subjectTable.querySelectorAll('tbody tr'));
+                        subjectRows.forEach(row => {
+                            const cells = Array.from(row.querySelectorAll('td'));
+                            const subject = cells[0].textContent.trim();
+                            // Extract session type from the badge
+                            const sessionType = cells[1].querySelector('.badge') ? cells[1].querySelector('.badge').textContent.trim() : 'Lecture';
+                            const presentCount = cells[2].textContent.trim();
+                            const absentCount = cells[3].textContent.trim();
+                            const lateCount = cells[4].textContent.trim();
+                            const percentage = cells[5].querySelector('.progress-bar').textContent.trim();
+                            
+                            data.push([subject, sessionType, presentCount, absentCount, lateCount, percentage, '']);
+                        });
+                        data.push(['', '', '', '', '', '', '']);
+                    }
+                });
+                
+                filename = `attendance_by_class_${startDate}_${department}_${className}_${sessionType}.csv`;
+            } 
+            else if (activeTab === 'student-tab') {
+                // Export student data
+                const students = Array.from(document.querySelectorAll('#studentPercentageContainer .student-card'));
+                
+                // Add headers for the simplified format
+                data.push(['Roll No', 'Student Name', 'Department', 'Class', 'Session Types', 'Present', 'Absent', 'Percentage']);
+                
+                // Add student data
+                students.forEach(student => {
+                    // Skip hidden students (filtered by search)
+                    if (student.style.display === 'none') {
+                        return;
+                    }
+                    
+                    try {
+                        // Get student information
+                        const studentName = student.querySelector('.card-header h5').textContent.trim();
+                        const rollNo = student.querySelector('.badge').textContent.replace('Roll:', '').trim();
+                        
+                        // Get department and class
+                        const departmentClass = student.querySelector('.small.text-white-50').textContent.split('|');
+                        const department = departmentClass[0].trim();
+                        const className = departmentClass[1].trim();
+                        
+                        // Get attendance counts
+                        const presentCount = student.querySelector('.bg-success h5').textContent.trim();
+                        const absentCount = student.querySelector('.bg-danger h5').textContent.trim();
+                        
+                        // Get percentage from progress bar
+                        const percentage = student.querySelector('.progress-bar').textContent.trim();
+                        
+                        // Get session types if available
+                        let sessionTypes = '';
+                        const sessionTypeBadges = student.querySelectorAll('.badge.badge-primary, .badge.badge-success');
+                        if (sessionTypeBadges.length > 0) {
+                            sessionTypes = Array.from(sessionTypeBadges)
+                                .map(badge => badge.textContent.trim())
+                                .join(', ');
+                        } else {
+                            sessionTypes = 'All';
+                        }
+                        
+                        // Add the row to data
+                        data.push([
+                            rollNo, 
+                            studentName, 
+                            department, 
+                            className, 
+                            sessionTypes,
+                            presentCount, 
+                            absentCount, 
+                            percentage
+                        ]);
+                    } catch (error) {
+                        console.error('Error processing student for export:', error);
+                        // Add a row with error information
+                        data.push(['Error', 'Error processing student data', '', '', '', '', '', '']);
+                    }
+                });
+                
+                filename = `attendance_by_student_${startDate}_${department}_${className}_${sessionType}.csv`;
+            }
+            
+            // Convert data to CSV
+            let csv = data.map(row => {
+                return row.map(cell => {
+                    // Escape quotes and wrap in quotes if contains comma
+                    if (cell.toString().includes(',') || cell.toString().includes('"')) {
+                        return `"${cell.toString().replace(/"/g, '""')}"`;
+                    }
+                    return cell;
+                }).join(',');
+            }).join('\n');
+            
+            // Create and download file
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            
+            link.href = URL.createObjectURL(blob);
+            link.download = filename;
+            link.click();
+            
+            // Show success message
+            const alertContainer = document.getElementById('alertContainer');
+            const alert = document.createElement('div');
+            alert.className = 'alert alert-success alert-dismissible fade show';
+            
+            if (activeTab === 'department-tab') {
+                successMessage = 'Department attendance report exported successfully.';
+            } else if (activeTab === 'class-tab') {
+                successMessage = 'Class attendance report exported successfully.';
+            } else if (activeTab === 'student-tab') {
+                successMessage = 'Student attendance report exported successfully.';
+            }
+            
+            alert.innerHTML = `
+                <strong>Success!</strong> ${successMessage}
+                <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            `;
+            alertContainer.appendChild(alert);
+            setTimeout(() => alert.remove(), 5000);
+        }
+
+        // Switch between detailed and percentage views
+        function switchView(viewType) {
+            const detailView = document.getElementById('detailView');
+            const percentageView = document.getElementById('percentageView');
+            const detailViewBtn = document.getElementById('detailViewBtn');
+            const percentageViewBtn = document.getElementById('percentageViewBtn');
+            const exportButton = document.getElementById('exportButton');
+            
+            if (viewType === 'detail') {
+                detailView.style.display = 'block';
+                percentageView.style.display = 'none';
+                detailViewBtn.classList.add('active');
+                percentageViewBtn.classList.remove('active');
+                exportButton.innerHTML = '<i class="fas fa-download"></i> Export Detailed Records';
+            } else {
+                detailView.style.display = 'none';
+                percentageView.style.display = 'block';
+                detailViewBtn.classList.remove('active');
+                percentageViewBtn.classList.add('active');
+                exportButton.innerHTML = '<i class="fas fa-download"></i> Export Percentage Report';
+                fetchAttendancePercentage();
+            }
+        }
+
+        // Fetch attendance percentage data
+        async function fetchAttendancePercentage() {
+            try {
+                // Show loading overlay
+                const loadingOverlay = document.getElementById('loadingOverlay');
+                loadingOverlay.style.display = 'flex';
+
+                const department = document.getElementById('department').value;
+                const className = document.getElementById('class').value;
+                const division = document.getElementById('division').value;
+                const sessionType = document.getElementById('sessionType').value;
+                const startDate = document.getElementById('startDate').value;
+                
+                // Build query parameters
+                const queryParams = new URLSearchParams();
+                if (department) queryParams.append('department', department);
+                if (className) queryParams.append('class', className);
+                if (division) queryParams.append('division', division);
+                if (sessionType) queryParams.append('sessionType', sessionType);
+                if (startDate) queryParams.append('startDate', startDate);
+                
+                const url = `/api/attendance/percentage?${queryParams}`;
+                console.log('Fetching percentage data from:', url);
+
+                // Use authenticatedFetch instead of regular fetch
+                const data = await authenticatedFetch(url);
+                console.log('Received percentage data:', data);
+
+                displayAttendancePercentage(data);
+            } catch (error) {
+                console.error('Error fetching attendance percentage:', error);
+                showError(error.message || 'Failed to fetch attendance percentage');
+            } finally {
+                // Hide loading overlay
+                const loadingOverlay = document.getElementById('loadingOverlay');
+                loadingOverlay.style.display = 'none';
+            }
+        }
+
+        // Display attendance percentage data
+        function displayAttendancePercentage(data) {
+            if (!data || !data.classSummary) {
+                showError('No attendance data available for the selected filters');
+                return;
+            }
+
+            const classSummary = data.classSummary;
+            const departmentSummary = data.departmentSummary;
+            const studentSummary = data.studentSummary;
+            
+            const classNames = Object.keys(classSummary);
+            const departmentNames = Object.keys(departmentSummary);
+            
+            if (classNames.length === 0) {
+                showError('No attendance data available for the selected filters');
+                return;
+            }
+            
+            // Prepare data for chart - show department percentages
+            const chartData = {
+                labels: departmentNames,
+                datasets: [{
+                    label: 'Attendance Percentage',
+                    data: departmentNames.map(deptName => departmentSummary[deptName].percentage.toFixed(1)),
+                    backgroundColor: 'rgba(54, 162, 235, 0.5)',
+                    borderColor: 'rgb(54, 162, 235)',
+                    borderWidth: 1
+                }]
+            };
+            
+            // Create or update chart
+            const chartCanvas = document.getElementById('attendanceChart');
+            if (window.attendanceBarChart) {
+                window.attendanceBarChart.destroy();
+            }
+            
+            window.attendanceBarChart = new Chart(chartCanvas, {
+                type: 'bar',
+                data: chartData,
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 100,
+                            title: {
+                                display: true,
+                                text: 'Percentage (%)',
+                                font: {
+                                    size: 10
+                                }
+                            },
+                            ticks: {
+                                font: {
+                                    size: 10
+                                }
+                            }
+                        },
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Department',
+                                font: {
+                                    size: 10
+                                }
+                            },
+                            ticks: {
+                                font: {
+                                    size: 10
+                                }
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return `Attendance: ${context.raw}%`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+            
+            // Generate detailed cards for departments
+            const departmentContainer = document.getElementById('departmentPercentageContainer');
+            departmentContainer.innerHTML = '';
+            departmentContainer.className = 'card-grid';
+            
+            departmentNames.forEach(departmentName => {
+                const departmentData = departmentSummary[departmentName];
+                const classes = Object.keys(departmentData.classes);
+                
+                const departmentCard = document.createElement('div');
+                departmentCard.className = 'card compact-card';
+                
+                let classesHtml = '';
+                if (classes.length > 0) {
+                    classesHtml = `
+                        <h6 class="mt-2 mb-1">Class-wise Attendance</h6>
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Class</th>
+                                    <th>Present</th>
+                                    <th>Absent</th>
+                                    <th>Late</th>
+                                    <th>%</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${classes.map(className => {
+                                    const classData = departmentData.classes[className];
+                                    return `
+                                        <tr>
+                                            <td>${className}</td>
+                                            <td>${classData.presentCount}</td>
+                                            <td>${classData.absentCount}</td>
+                                            <td>${classData.lateCount}</td>
+                                            <td>
+                                                <div class="progress" style="width: 60px;">
+                                                    <div class="progress-bar bg-${getProgressBarColor(classData.percentage)}" 
+                                                        role="progressbar" 
+                                                        style="width: ${classData.percentage.toFixed(1)}%" 
+                                                        aria-valuenow="${classData.percentage.toFixed(1)}" 
+                                                        aria-valuemin="0" 
+                                                        aria-valuemax="100">
+                                                        ${classData.percentage.toFixed(1)}%
+                                                    </div>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    `;
+                                }).join('')}
+                            </tbody>
+                        </table>
+                    `;
+                }
+                
+                departmentCard.innerHTML = `
+                    <div class="card-header bg-info text-white">
+                        <h5 class="mb-0">${departmentName}</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-7">
+                                <div class="progress" style="height: 18px;">
+                                    <div class="progress-bar bg-${getProgressBarColor(departmentData.percentage)}" 
+                                        role="progressbar" 
+                                        style="width: ${departmentData.percentage.toFixed(1)}%" 
+                                        aria-valuenow="${departmentData.percentage.toFixed(1)}" 
+                                        aria-valuemin="0" 
+                                        aria-valuemax="100">
+                                        ${departmentData.percentage.toFixed(1)}%
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-5">
+                                <div class="row no-gutters">
+                                    <div class="col-4 px-1">
+                                        <div class="border rounded p-1 bg-success text-white text-center">
+                                            <h5>${departmentData.presentCount}</h5>
+                                            <small>Present</small>
+                                        </div>
+                                    </div>
+                                    <div class="col-4 px-1">
+                                        <div class="border rounded p-1 bg-danger text-white text-center">
+                                            <h5>${departmentData.absentCount}</h5>
+                                            <small>Absent</small>
+                                        </div>
+                                    </div>
+                                    <div class="col-4 px-1">
+                                        <div class="border rounded p-1 bg-warning text-white text-center">
+                                            <h5>${departmentData.lateCount}</h5>
+                                            <small>Late</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        ${classesHtml}
+                    </div>
+                `;
+                
+                departmentContainer.appendChild(departmentCard);
+            });
+            
+            // Generate detailed cards for each class
+            const classContainer = document.getElementById('classPercentageContainer');
+            classContainer.innerHTML = '';
+            classContainer.className = 'card-grid';
+            
+            classNames.forEach(className => {
+                const classData = classSummary[className];
+                const subjects = classData.subjects ? Object.keys(classData.subjects) : [];
+                
+                const classCard = document.createElement('div');
+                classCard.className = 'card compact-card';
+                
+                let subjectsHtml = '';
+                if (subjects.length > 0) {
+                    subjectsHtml = `
+                        <h6 class="mt-2 mb-1">Subject-wise Attendance</h6>
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Subject</th>
+                                    <th>Type</th>
+                                    <th>P</th>
+                                    <th>A</th>
+                                    <th>L</th>
+                                    <th>%</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${subjects.map(subject => {
+                                    const subjectData = classData.subjects[subject];
+                                    const sessionType = subjectData.sessionType || 'Lecture';
+                                    const badgeClass = sessionType === 'Lecture' ? 'primary' : 'success';
+                                    const badgeLabel = sessionType === 'Lecture' ? 'L' : 'P';
+                                    
+                                    return `
+                                        <tr>
+                                            <td>${subject}</td>
+                                            <td><span class="badge badge-${badgeClass}">${badgeLabel}</span></td>
+                                            <td>${subjectData.presentCount}</td>
+                                            <td>${subjectData.absentCount}</td>
+                                            <td>${subjectData.lateCount}</td>
+                                            <td>
+                                                <div class="progress" style="width: 60px;">
+                                                    <div class="progress-bar bg-${getProgressBarColor(subjectData.percentage)}" 
+                                                        role="progressbar" 
+                                                        style="width: ${subjectData.percentage.toFixed(1)}%" 
+                                                        aria-valuenow="${subjectData.percentage.toFixed(1)}" 
+                                                        aria-valuemin="0" 
+                                                        aria-valuemax="100">
+                                                        ${subjectData.percentage.toFixed(1)}%
+                                                    </div>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    `;
+                                }).join('')}
+                            </tbody>
+                        </table>
+                    `;
+                }
+                
+                classCard.innerHTML = `
+                    <div class="card-header bg-primary text-white">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0">${className}</h5>
+                            <span class="badge badge-light">${classData.department}</span>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-7">
+                                <div class="progress" style="height: 18px;">
+                                    <div class="progress-bar bg-${getProgressBarColor(classData.percentage)}" 
+                                        role="progressbar" 
+                                        style="width: ${classData.percentage.toFixed(1)}%" 
+                                        aria-valuenow="${classData.percentage.toFixed(1)}" 
+                                        aria-valuemin="0" 
+                                        aria-valuemax="100">
+                                        ${classData.percentage.toFixed(1)}%
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-5">
+                                <div class="row no-gutters">
+                                    <div class="col-4 px-1">
+                                        <div class="border rounded p-1 bg-success text-white text-center">
+                                            <h5>${classData.presentCount}</h5>
+                                            <small>Present</small>
+                                        </div>
+                                    </div>
+                                    <div class="col-4 px-1">
+                                        <div class="border rounded p-1 bg-danger text-white text-center">
+                                            <h5>${classData.absentCount}</h5>
+                                            <small>Absent</small>
+                                        </div>
+                                    </div>
+                                    <div class="col-4 px-1">
+                                        <div class="border rounded p-1 bg-warning text-white text-center">
+                                            <h5>${classData.lateCount}</h5>
+                                            <small>Late</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        ${subjectsHtml}
+                    </div>
+                `;
+                
+                classContainer.appendChild(classCard);
+            });
+            
+            // Generate detailed cards for each student
+            const studentContainer = document.getElementById('studentPercentageContainer');
+            studentContainer.innerHTML = '';
+            studentContainer.className = 'card-grid';
+            
+            if (studentSummary && studentSummary.length > 0) {
+                // Add student search functionality
+                const studentSearch = document.getElementById('studentSearch');
+                studentSearch.addEventListener('input', function() {
+                    filterStudentsByPercentage(); // Use the same function for consistency
+                });
+
+                // Sort students by name
+                studentSummary.sort((a, b) => a.name.localeCompare(b.name));
+                
+                studentSummary.forEach(student => {
+                    const subjects = Object.keys(student.subjects);
+                    
+                    const studentCard = document.createElement('div');
+                    studentCard.className = 'card compact-card student-card';
+                    studentCard.setAttribute('data-student-name', student.name);
+                    studentCard.setAttribute('data-student-roll', student.rollNo);
+                    
+                    // Create department and class attendance summary instead of subject-wise breakdown
+                    const departmentClass = `${student.department} | ${student.class}`;
+                    
+                    // Determine if we have session type information
+                    const sessionTypes = [];
+                    subjects.forEach(subject => {
+                        const subjectData = student.subjects[subject];
+                        if (subjectData.sessionType && !sessionTypes.includes(subjectData.sessionType)) {
+                            sessionTypes.push(subjectData.sessionType);
+                        }
+                    });
+                    
+                    // Create session type badges if available
+                    const sessionTypeBadges = sessionTypes.length > 0 ? 
+                        sessionTypes.map(type => {
+                            const badgeClass = type === 'Lecture' ? 'primary' : 'success';
+                            return `<span class="badge badge-${badgeClass} mr-1">${type}</span>`;
+                        }).join(' ') : '';
+                    
+                    studentCard.innerHTML = `
+                        <div class="card-header bg-secondary text-white">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <h5 class="mb-0">${student.name}</h5>
+                                <span class="badge badge-light">Roll: ${student.rollNo}</span>
+                            </div>
+                            <div class="small text-white-50">
+                                ${departmentClass}
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-7">
+                                    <div class="progress" style="height: 18px;">
+                                        <div class="progress-bar bg-${getProgressBarColor(student.percentage)}" 
+                                            role="progressbar" 
+                                            style="width: ${student.percentage.toFixed(1)}%" 
+                                            aria-valuenow="${student.percentage.toFixed(1)}" 
+                                            aria-valuemin="0" 
+                                            aria-valuemax="100">
+                                            ${student.percentage.toFixed(1)}%
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-5">
+                                    <div class="row no-gutters">
+                                        <div class="col-4 px-1">
+                                            <div class="border rounded p-1 bg-success text-white text-center">
+                                                <h5>${student.presentCount}</h5>
+                                                <small>Present</small>
+                                            </div>
+                                        </div>
+                                        <div class="col-4 px-1">
+                                            <div class="border rounded p-1 bg-danger text-white text-center">
+                                                <h5>${student.absentCount}</h5>
+                                                <small>Absent</small>
+                                            </div>
+                                        </div>
+                                        <div class="col-4 px-1">
+                                            <div class="border rounded p-1 bg-warning text-white text-center">
+                                                <h5>${student.lateCount}</h5>
+                                                <small>Late</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="mt-2">
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <span class="font-weight-bold">Total Records:</span>
+                                    <span>${student.totalRecords}</span>
+                                </div>
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <span class="font-weight-bold">Department/Class:</span>
+                                    <span>${departmentClass}</span>
+                                </div>
+                                ${sessionTypes.length > 0 ? `
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <span class="font-weight-bold">Session Types:</span>
+                                    <div>${sessionTypeBadges}</div>
+                                </div>` : ''}
+                            </div>
+                        </div>
+                    `;
+                    
+                    studentContainer.appendChild(studentCard);
+                });
+            } else {
+                studentContainer.innerHTML = '<div class="alert alert-info">No student attendance data available for the selected filters</div>';
+            }
+        }
+
+        // Helper function to determine progress bar color based on percentage
+        function getProgressBarColor(percentage) {
+            if (percentage >= 75) return 'success';
+            if (percentage >= 50) return 'info';
+            if (percentage >= 25) return 'warning';
+            return 'danger';
+        }
+
+        function filterStudentsByPercentage() {
+            const percentageFilter = document.getElementById('percentageFilter');
+            const percentageThreshold = parseFloat(percentageFilter.value);
+            const comparisonOperator = document.getElementById('percentageComparison').value;
+            const searchTerm = document.getElementById('studentSearch').value.toLowerCase();
+            const studentCards = document.querySelectorAll('.student-card');
+            let visibleCount = 0;
+
+            studentCards.forEach(card => {
+                const percentage = parseFloat(card.querySelector('.progress-bar').textContent.trim());
+                const studentName = card.getAttribute('data-student-name').toLowerCase();
+                const studentRoll = card.getAttribute('data-student-roll').toLowerCase();
+                
+                let matchesPercentage = true;
+                switch (comparisonOperator) {
+                    case 'gte':
+                        matchesPercentage = isNaN(percentageThreshold) || percentage >= percentageThreshold;
+                        break;
+                    case 'lte':
+                        matchesPercentage = isNaN(percentageThreshold) || percentage <= percentageThreshold;
+                        break;
+                    case 'eq':
+                        matchesPercentage = isNaN(percentageThreshold) || percentage === percentageThreshold;
+                        break;
+                }
+
+                // Check both search term and percentage threshold
+                const matchesSearch = !searchTerm || studentName.includes(searchTerm) || studentRoll.includes(searchTerm);
+                
+                if (matchesSearch && matchesPercentage) {
+                    card.style.display = 'block';
+                    visibleCount++;
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+
+            // Display count of visible students
+            const studentCount = document.createElement('div');
+            studentCount.className = 'alert alert-info mt-2';
+            studentCount.id = 'studentFilterCount';
+            
+            let comparisonSymbol = '';
+            switch (comparisonOperator) {
+                case 'gte': comparisonSymbol = '≥'; break;
+                case 'lte': comparisonSymbol = '≤'; break;
+                case 'eq': comparisonSymbol = '='; break;
+            }
+            
+            studentCount.innerHTML = `Showing ${visibleCount} students ${percentageThreshold ? `with attendance ${comparisonSymbol} ${percentageThreshold}%` : ''}`;
+            
+            // Remove any existing count alert
+            const existingCount = document.getElementById('studentFilterCount');
+            if (existingCount) {
+                existingCount.remove();
+            }
+            
+            // Add the count alert if we're filtering
+            if (percentageThreshold !== '') {
+                const container = document.getElementById('studentPercentageContainer');
+                container.insertAdjacentElement('beforebegin', studentCount);
+            }
+        }
+
+        function resetStudentFilters() {
+            const studentSearch = document.getElementById('studentSearch');
+            const percentageFilter = document.getElementById('percentageFilter');
+            const percentageComparison = document.getElementById('percentageComparison');
+            studentSearch.value = '';
+            percentageFilter.value = '';
+            percentageComparison.value = 'gte'; // Reset to default operator
+            
+            // Show all students
+            document.querySelectorAll('.student-card').forEach(card => {
+                card.style.display = 'block';
+            });
+            
+            // Remove the count display
+            const existingCount = document.getElementById('studentFilterCount');
+            if (existingCount) {
+                existingCount.remove();
+            }
+        }
+
+        // Add event listener for Enter key on percentage filter
+        document.addEventListener('DOMContentLoaded', function() {
+            const percentageFilter = document.getElementById('percentageFilter');
+            percentageFilter.addEventListener('keyup', function(event) {
+                if (event.key === 'Enter') {
+                    filterStudentsByPercentage();
+                }
+            });
+            
+            // Initialize delete confirmation modal
+            initializeDeleteModal();
+        });
+        
+        // Initialize the delete confirmation modal
+        function initializeDeleteModal() {
+            // Add event listener to the confirm delete button
+            const confirmBtn = document.getElementById('confirmDeleteBtn');
+            
+            // Remove any existing event listeners to prevent duplicates
+            const newConfirmBtn = confirmBtn.cloneNode(true);
+            confirmBtn.parentNode.replaceChild(newConfirmBtn, confirmBtn);
+            
+            // Add the event listener to the new button
+            newConfirmBtn.addEventListener('click', function() {
+                // Get the action and record IDs
+                const action = this.getAttribute('data-action');
+                const recordIdsJson = this.getAttribute('data-record-ids');
+                
+                console.log('Confirm button clicked with:', { action, recordIdsJson });
+                
+                if (!action || !recordIdsJson) {
+                    console.error('Missing action or record IDs');
+                    return;
+                }
+                
+                // Parse the record IDs
+                let recordIds;
+                try {
+                    recordIds = JSON.parse(recordIdsJson);
+                    console.log('Parsed record IDs:', recordIds);
+                } catch (error) {
+                    console.error('Error parsing record IDs:', error);
+                    return;
+                }
+                
+                // Hide the modal
+                $('#deleteConfirmationModal').modal('hide');
+                
+                // Execute the appropriate delete function after modal is hidden
+                setTimeout(() => {
+                    if (action === 'single-delete' && recordIds.length === 1) {
+                        console.log('Executing single delete for record:', recordIds[0]);
+                        deleteAttendanceRecord(recordIds[0]);
+                    } else if (action === 'batch-delete' && recordIds.length > 0) {
+                        console.log('Executing batch delete for records:', recordIds);
+                        deleteMultipleRecords(recordIds);
+                    }
+                }, 500);
+            });
+            
+            // Clear data attributes when modal is hidden
+            $('#deleteConfirmationModal').on('hidden.bs.modal', function() {
+                const confirmBtn = document.getElementById('confirmDeleteBtn');
+                confirmBtn.removeAttribute('data-action');
+                confirmBtn.removeAttribute('data-record-ids');
+            });
+        }
+    </script>
+
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.4/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</body>
+</html> 

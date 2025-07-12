@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BHARATI Educational Management System</title>
+    <!-- Add global error handler for JSON parsing errors -->
+    <script>
+        // Global error handler for JSON parsing errors
+        window.addEventListener('error', function(event) {
+            console.error('Global error caught:', event.error);
+            
+            // Check if it's a JSON parsing error
+            if (event.error && event.error.message && 
+                (event.error.message.includes('Unexpected token') || 
+                 event.error.message.includes('JSON'))) {
+                
+                console.error('JSON Parse Error detected:', event.error.message);
+                
+                // Prevent the default error handling
+                event.preventDefault();
+                
+                // Redirect to error page with details
+                window.location.href = '/error.html?code=500&message=' + 
+                    encodeURIComponent('Failed to process server response. Please try again later.');
+                
+                return true;
+            }
+        });
+    </script>
+    <!-- Rest of your head content -->
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            min-height: 100vh;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .hero-section {
+            background: linear-gradient(135deg, #1a73e8 0%, #0d47a1 100%);
+            color: white;
+            padding: 80px 0;
+            text-align: center;
+        }
+        
+        .hero-title {
+            font-size: 3.5rem;
+            font-weight: 700;
+            margin-bottom: 20px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+        }
+        
+        .hero-subtitle {
+            font-size: 1.5rem;
+            margin-bottom: 30px;
+            font-weight: 300;
+        }
+        
+        .btn-hero {
+            background-color: #FFD700;
+            color: #333;
+            font-weight: 600;
+            padding: 12px 30px;
+            border-radius: 30px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        
+        .btn-hero:hover {
+            background-color: white;
+            transform: translateY(-3px);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+        }
+        
+        .features-section {
+            padding: 80px 0;
+        }
+        
+        .feature-card {
+            background: white;
+            border-radius: 10px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+        }
+        
+        .feature-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.15);
+        }
+        
+        .feature-icon {
+            font-size: 48px;
+            color: #1a73e8;
+            margin-bottom: 20px;
+        }
+        
+        .feature-title {
+            font-size: 24px;
+            font-weight: 600;
+            margin-bottom: 15px;
+        }
+        
+        .feature-description {
+            color: #666;
+            line-height: 1.6;
+        }
+        
+        .footer {
+            background: #333;
+            color: white;
+            padding: 30px 0;
+            margin-top: auto;
+        }
+        
+        .footer a {
+            color: #FFD700;
+        }
+        
+        .github-demo-notice {
+            background-color: #ffeb3b;
+            color: #333;
+            padding: 15px;
+            margin-bottom: 0;
+            text-align: center;
+            font-weight: 600;
+        }
+        
+        .github-demo-credentials {
+            background-color: #fff3cd;
+            padding: 15px;
+            border-radius: 5px;
+            margin-top: 20px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        
+        .github-demo-credentials h4 {
+            color: #856404;
+            margin-bottom: 10px;
+        }
+        
+        .credential-box {
+            background-color: #fff;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 10px;
+            margin-bottom: 10px;
+        }
+        
+        .credential-box strong {
+            display: inline-block;
+            width: 100px;
+        }
+    </style>
+</head>
+<body>
+    <!-- GitHub Pages Demo Notice -->
+    <div class="github-demo-notice" id="githubDemoNotice" style="display: none;">
+        <i class="fas fa-info-circle"></i> 
+        This is a demo version running on GitHub Pages. Backend functionality is simulated.
+    </div>
+
+    <div class="hero-section">
+        <div class="container">
+            <h1 class="hero-title">BHARATI</h1>
+            <p class="hero-subtitle">Educational Management System</p>
+            <a href="login.html" class="btn btn-hero">Get Started</a>
+        </div>
+    </div>
+
+    <div class="features-section">
+        <div class="container">
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="feature-card">
+                        <div class="feature-icon">
+                            <i class="fas fa-user-graduate"></i>
+                        </div>
+                        <h3 class="feature-title">Student Management</h3>
+                        <p class="feature-description">
+                            Easily manage student records, track academic progress, and maintain comprehensive student profiles.
+                        </p>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="feature-card">
+                        <div class="feature-icon">
+                            <i class="fas fa-chalkboard-teacher"></i>
+                        </div>
+                        <h3 class="feature-title">Teacher Management</h3>
+                        <p class="feature-description">
+                            Streamline teacher assignments, track performance, and facilitate communication between faculty members.
+                        </p>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="feature-card">
+                        <div class="feature-icon">
+                            <i class="fas fa-clipboard-check"></i>
+                        </div>
+                        <h3 class="feature-title">Attendance Tracking</h3>
+                        <p class="feature-description">
+                            Monitor student attendance in real-time, generate reports, and identify attendance patterns.
+                        </p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- GitHub Pages Demo Credentials -->
+            <div class="github-demo-credentials" id="githubDemoCredentials" style="display: none;">
+                <h4><i class="fas fa-key"></i> Demo Login Credentials</h4>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="credential-box">
+                            <p class="mb-1"><strong>Admin:</strong> admin</p>
+                            <p class="mb-0"><strong>Password:</strong> admin123</p>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="credential-box">
+                            <p class="mb-1"><strong>Teacher:</strong> teacher</p>
+                            <p class="mb-0"><strong>Password:</strong> teacher123</p>
+                        </div>
+                    </div>
+                </div>
+                <p class="mb-0 mt-2 text-muted"><small>Note: All data is stored locally in your browser and will be reset when you clear browser data.</small></p>
+            </div>
+        </div>
+    </div>
+
+    <footer class="footer">
+        <div class="container">
+            <div class="row">
+                <div class="col-md-6">
+                    <p>&copy; 2024 BHARATI Educational Management System</p>
+                </div>
+                <div class="col-md-6 text-md-right">
+                    <p>Designed with <i class="fas fa-heart"></i> for educational institutions</p>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // Check if running on GitHub Pages
+        document.addEventListener('DOMContentLoaded', function() {
+            if (window.location.hostname.includes('github.io')) {
+                document.getElementById('githubDemoNotice').style.display = 'block';
+                document.getElementById('githubDemoCredentials').style.display = 'block';
+            }
+        });
+    </script>
+</body>
+</html> 
